@@ -86,7 +86,9 @@ class ClassificarOpenAITests(TestCase):
 
         self.assertTrue(resultado)
         mock_openai_cls.assert_called_once_with(
-            api_key=self.config.api_key, base_url=None, timeout=services.TIMEOUT_S,
+            api_key=self.config.api_key,
+            base_url=None,
+            timeout=services.TIMEOUT_S,
         )
 
 
@@ -106,7 +108,9 @@ class ClassificarOpenAICompativelTests(TestCase):
         services.classificar(self.config, 'quer o link', 'sim')
 
         mock_openai_cls.assert_called_once_with(
-            api_key=self.config.api_key, base_url=self.config.base_url, timeout=services.TIMEOUT_S,
+            api_key=self.config.api_key,
+            base_url=self.config.base_url,
+            timeout=services.TIMEOUT_S,
         )
 
 

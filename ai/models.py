@@ -19,9 +19,7 @@ class AIConfig(BaseModel):
     owner = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='ai_configs')
     nome = models.CharField('nome', max_length=100)
     provider = models.CharField('provedor', max_length=20, choices=PROVIDER_CHOICES)
-    modelo = models.CharField(
-        'modelo', max_length=100, help_text='Ex.: claude-opus-5, gpt-5, gemini-2.5-flash.'
-    )
+    modelo = models.CharField('modelo', max_length=100, help_text='Ex.: claude-opus-5, gpt-5, gemini-2.5-flash.')
     api_key_cifrada = models.TextField('api key (cifrada)')
     base_url = models.CharField(
         'URL base',

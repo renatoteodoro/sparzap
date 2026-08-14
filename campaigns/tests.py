@@ -204,7 +204,10 @@ class ProcessCampaignContactEagerModeTests(TestCase):
         )
         self.script = Script.objects.create(owner=self.owner, nome='S')
         self.campaign = Campaign.objects.create(
-            owner=self.owner, nome='C', instance=self.instance, script=self.script,
+            owner=self.owner,
+            nome='C',
+            instance=self.instance,
+            script=self.script,
             status=Campaign.STATUS_EM_ANDAMENTO,
         )
         self.contact = Contact.objects.create(owner=self.owner, numero_e164='+5511900033344', nome='Lead')

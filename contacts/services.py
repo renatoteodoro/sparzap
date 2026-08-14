@@ -243,9 +243,7 @@ def extract_participants(group):
     # O Contact em si nao e' apagado: ele pode ser membro comum de outro
     # grupo ou ter sido cadastrado a mao, e apagar seria destrutivo demais.
     if numeros_de_admin:
-        removidos, _ = GroupMember.objects.filter(
-            group=group, contact__numero_e164__in=numeros_de_admin
-        ).delete()
+        removidos, _ = GroupMember.objects.filter(group=group, contact__numero_e164__in=numeros_de_admin).delete()
         if removidos:
             logger.info('extract_participants_admins_desvinculados group=%s total=%s', group.jid, removidos)
 

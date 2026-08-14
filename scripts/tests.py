@@ -185,7 +185,9 @@ class CondicaoComIATests(TestCase):
 
         self.assertEqual(self._resolve('não sei, mas pode mandar'), self.desvio)
         mock_classificar.assert_called_once_with(
-            self.ia_config, 'o contato aceitou o convite', 'não sei, mas pode mandar',
+            self.ia_config,
+            'o contato aceitou o convite',
+            'não sei, mas pode mandar',
         )
 
     @patch('ai.services.classificar')

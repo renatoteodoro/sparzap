@@ -75,9 +75,7 @@ class EvolutionClient:
         session = self.session if retry else self.session_sem_retry
         started = time.monotonic()
         try:
-            response = session.request(
-                method, url, headers=self._headers(), timeout=timeout or self.timeout, **kwargs
-            )
+            response = session.request(method, url, headers=self._headers(), timeout=timeout or self.timeout, **kwargs)
         except requests.exceptions.RequestException as exc:
             logger.warning(
                 'evolution_request_failed method=%s path=%s error=%s latency_ms=%.0f',

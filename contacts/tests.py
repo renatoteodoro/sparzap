@@ -428,9 +428,7 @@ class ExclusaoDeContatoNaoAmpliaGatilhoTests(TestCase):
     def test_gatilho_sem_restricao_de_contato_nao_e_afetado(self):
         from triggers.models import Trigger
 
-        global_ = Trigger.objects.create(
-            owner=self.owner, instance=self.instance, nome='Global', palavras_chave='oi'
-        )
+        global_ = Trigger.objects.create(owner=self.owner, instance=self.instance, nome='Global', palavras_chave='oi')
         self.alvo.delete()
         global_.refresh_from_db()
         self.assertTrue(global_.ativo)
@@ -453,9 +451,7 @@ class DemoteNaoTocaEmOutrosAdminsTests(TestCase):
     def setUp(self):
         self.owner = make_user(email='demote-escopo@teste.com')
         self.instance = make_instance(owner=self.owner, numero='+5511900000000')
-        self.group = Group.objects.create(
-            instance=self.instance, nome='G', jid='g@g.us', bot_e_admin=True
-        )
+        self.group = Group.objects.create(instance=self.instance, nome='G', jid='g@g.us', bot_e_admin=True)
 
     @patch('instances.evolution.EvolutionClient.update_participant')
     def test_demote_envia_somente_o_jid_do_bot(self, mock_update):
