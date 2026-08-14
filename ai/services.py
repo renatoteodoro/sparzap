@@ -11,6 +11,12 @@ PROMPT_TEMPLATE = (
     'Responda apenas com a palavra SIM ou a palavra NAO (sem acento, sem pontuação, '
     'sem nenhuma explicação) — nada além disso.\n\n'
     'Critério do que conta como SIM: {descricao}\n\n'
+    'A pessoa está respondendo pelo celular, então a resposta pode vir com hesitação, '
+    'erros de digitação ou frases incompletas. Julgue pela intenção geral, não apenas '
+    'pela primeira palavra: se em algum ponto da resposta a pessoa concorda, autoriza '
+    'ou pede para prosseguir — mesmo começando com "não sei", "talvez" ou outra dúvida — '
+    'isso conta como SIM. Só responda NAO se a pessoa recusar, pedir para não enviar/parar, '
+    'ou a resposta não tiver nenhum sinal de concordância.\n\n'
     'Resposta do contato: "{texto}"'
 )
 
