@@ -235,6 +235,20 @@ class CondicaoComIATests(TestCase):
         # 'nao' bate em condicao_contem -- cai no fallback de palavra-chave
         self.assertEqual(resultado, self.desvio)
 
+    def test_descricao_vazia_nao_chama_a_ia(self):
+        # Sem critério não há o que classificar: o prompt iria com "Descrição: "
+        # em branco e a IA devolveria SIM/NAO no chute, desviando o run sem
+        # nenhuma regra. O form já barra isso na tela; o motor tem que barrar
+        # também, para passos gravados fora dela (import, shell, dados antigos).
+        self.condicao.condicao_ia_descricao = '   '
+        self.condicao.save()
+
+        with patch('ai.services.classificar', autospec=True) as mock_classificar:
+            resultado = self._resolve('nao quero')
+            mock_classificar.assert_not_called()
+        # 'nao' bate em condicao_contem -- cai no fallback de palavra-chave
+        self.assertEqual(resultado, self.desvio)
+
     def test_script_com_ia_desligada_nunca_chama_a_ia(self):
         # Interruptor geral do script (Script.usar_ia): desligado, nenhum
         # passo do script consulta IA, mesmo com usar_ia=True e ia_config

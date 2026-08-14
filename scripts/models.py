@@ -89,7 +89,13 @@ class ScriptStep(BaseModel):
     condicao_ia_descricao = models.TextField(
         'descrição para a IA',
         blank=True,
-        help_text=('O que conta como positivo — ex.: "o contato demonstrou interesse ' 'em receber o link do grupo".'),
+        help_text=(
+            'Descreva a MESMA condição do campo "resposta contém", em português: '
+            'a IA decide se a resposta se encaixa nela, e quem se encaixa PULA '
+            'para o próximo passo. Como o pulo leva à mensagem que não deve ser '
+            'enviada, descreva a recusa — ex.: "o contato recusou o convite ou '
+            'pediu para parar de receber mensagens".'
+        ),
     )
     etapa_destino = models.CharField('etapa destino (crm)', max_length=100, blank=True)
 

@@ -7,16 +7,20 @@ logger = logging.getLogger('sparzap')
 
 TIMEOUT_S = 10
 
+# O template é deliberadamente NEUTRO quanto à direção: quem diz o que conta
+# como SIM é a `condicao_ia_descricao` do passo. Uma orientação fixa aqui
+# ("concordar conta como SIM") contradiz descrições de direção oposta ("o
+# contato recusou") e inverte toda a classificação -- ver PromptTemplateTests.
 PROMPT_TEMPLATE = (
     'Responda apenas com a palavra SIM ou a palavra NAO (sem acento, sem pontuação, '
     'sem nenhuma explicação) — nada além disso.\n\n'
-    'Critério do que conta como SIM: {descricao}\n\n'
+    'Responda SIM se a resposta do contato se encaixa na descrição abaixo, e NAO se '
+    'não se encaixa.\n\n'
+    'Descrição: {descricao}\n\n'
     'A pessoa está respondendo pelo celular, então a resposta pode vir com hesitação, '
-    'erros de digitação ou frases incompletas. Julgue pela intenção geral, não apenas '
-    'pela primeira palavra: se em algum ponto da resposta a pessoa concorda, autoriza '
-    'ou pede para prosseguir — mesmo começando com "não sei", "talvez" ou outra dúvida — '
-    'isso conta como SIM. Só responda NAO se a pessoa recusar, pedir para não enviar/parar, '
-    'ou a resposta não tiver nenhum sinal de concordância.\n\n'
+    'erros de digitação ou frases incompletas. Julgue pela intenção geral da resposta '
+    'inteira, não apenas pela primeira palavra — uma resposta que começa com "não sei" '
+    'ou "talvez" pode ainda assim se encaixar na descrição, dependendo do que vem depois.\n\n'
     'Resposta do contato: "{texto}"'
 )
 

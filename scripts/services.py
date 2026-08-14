@@ -165,15 +165,20 @@ def _resolve_condicao(script, step, texto):
     Se `step` for do tipo condição, resolve o alvo comparando `texto`; senão
     retorna o próprio `step`.
 
-    Se o script tiver `usar_ia` ligado (interruptor geral — ver botão na tela
-    do script), o passo tiver `usar_ia` ligado, uma `ia_config` configurada e
-    ativa, e houver texto de fato (um timeout sem resposta chega aqui com
-    `texto=''` e não deve ser mandado pra IA — não há o que classificar, e um
-    vazio classificado por engano pode desviar o run sem nenhuma resposta
-    real do contato), tenta classificar a resposta via IA primeiro. Se a IA
-    responder com sucesso (True/False), o resultado dela decide o desvio. Se
-    a IA falhar, estiver desativada/desligada ou não estiver configurada,
-    cai no matching por palavra-chave de sempre.
+    A IA só é consultada quando TUDO abaixo vale — qualquer item que falte
+    cai no matching por palavra-chave de sempre:
+
+    - `script.usar_ia` ligado (interruptor geral — botão na tela do script);
+    - `step.usar_ia` ligado, com `ia_config` configurada e ativa;
+    - `condicao_ia_descricao` preenchida (sem critério a IA chuta);
+    - `texto` não vazio (um timeout sem resposta chega aqui com `texto=''`;
+      classificar o vazio pode desviar o run sem resposta real do contato).
+
+    Se a IA responder com sucesso (True/False), o resultado dela decide o
+    desvio, com a MESMA semântica do `condicao_contem`: casou → pula para
+    `proximo_passo`; não casou → segue na ordem normal. Por isso a descrição
+    tem que apontar na mesma direção do `condicao_contem` (ver o help_text
+    dos dois campos) — descrevê-la ao contrário inverte o funil inteiro.
 
     `condicao_contem` aceita vários termos separados por vírgula e casa se
     QUALQUER um aparecer na resposta. A comparação ignora maiúsculas E
@@ -189,6 +194,7 @@ def _resolve_condicao(script, step, texto):
         and step.usar_ia
         and step.ia_config_id
         and step.ia_config.ativo
+        and step.condicao_ia_descricao.strip()
         and (texto or '').strip()
     ):
         from ai.services import classificar  # Sprint 20: IA nos passos de condição

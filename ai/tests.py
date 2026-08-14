@@ -133,6 +133,42 @@ class ClassificarGeminiTests(TestCase):
         mock_client_cls.assert_called_once()
 
 
+class PromptTemplateTests(TestCase):
+    """
+    O template tem que ser NEUTRO: quem define o que conta como SIM é a
+    `condicao_ia_descricao` do passo, nunca o template.
+
+    Regressão: o template já teve um parágrafo fixo mandando responder SIM
+    quando o contato "concorda, autoriza ou pede para prosseguir". Isso
+    contradizia qualquer descrição de direção oposta ("o contato recusou o
+    convite") e a IA — obedecendo à instrução mais específica, a fixa —
+    invertia TODA classificação, mandando a mensagem de recusa pra quem
+    tinha aceitado.
+    """
+
+    DIRECIONAIS = ('concorda', 'autoriza', 'prosseguir', 'recus', 'aceit', 'interesse', 'positiv', 'negativ')
+
+    def test_template_nao_embute_direcao_semantica(self):
+        prompt = services.PROMPT_TEMPLATE.format(descricao='DESCRICAO_DO_PASSO', texto='TEXTO_DO_CONTATO')
+        esqueleto = prompt.replace('DESCRICAO_DO_PASSO', '').replace('TEXTO_DO_CONTATO', '').lower()
+
+        for termo in self.DIRECIONAIS:
+            self.assertNotIn(
+                termo,
+                esqueleto,
+                f'"{termo}" no template presume a direção do critério e inverte descrições opostas',
+            )
+
+    def test_prompt_carrega_descricao_e_texto_do_passo(self):
+        prompt = services.PROMPT_TEMPLATE.format(
+            descricao='o contato recusou o convite',
+            texto='sim, pode mandar',
+        )
+
+        self.assertIn('o contato recusou o convite', prompt)
+        self.assertIn('sim, pode mandar', prompt)
+
+
 class AIConfigFormTests(TestCase):
     """`base_url` é obrigatório para "Compatível com OpenAI" -- o próprio
     help_text do campo já diz isso; o form precisa aplicar, não só avisar."""
