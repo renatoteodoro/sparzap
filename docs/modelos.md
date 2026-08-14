@@ -82,6 +82,13 @@ a cada envio (`library.services.pick_variant`).
 | `aguardar_resposta` | `timeout_h` (padrão 48) |
 | `condicao` | `condicao_contem`, `proximo_passo` (destino se a condição casar), `usar_ia`/`ia_config`/`condicao_ia_descricao` (classificação por IA, opcional — cai em `condicao_contem` se falhar) |
 | `mudar_etapa` | `etapa_destino` (nome da etapa no CRM) |
+| `encerrar` | — (conclui o run; marca o fim de um ramo do funil) |
+
+Um funil com dois ramos (condição → mensagem A / mensagem B) precisa de um
+passo `encerrar` no fim do primeiro ramo. Sem ele, o passo de mensagem
+avança para `ordem + 1` e o ramo de cima escorrega para dentro do ramo de
+baixo, mandando as duas mensagens ao mesmo contato. Omitir o `encerrar` é o
+que faz os dois ramos convergirem de propósito numa mensagem final comum.
 
 **`ScriptRun`** — execução do script para um contato.
 `status`: `em_andamento` · `aguardando_resposta` · `concluido` ·

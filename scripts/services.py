@@ -84,6 +84,12 @@ def execute_step(run):
         elif step.tipo == ScriptStep.TIPO_MUDAR_ETAPA:
             _apply_mudar_etapa(run, step)
             _advance(run)
+        elif step.tipo == ScriptStep.TIPO_ENCERRAR:
+            # Fim de ramo. Sem isto, um passo de mensagem sempre avança para
+            # `ordem + 1` e o ramo positivo escorrega para dentro do ramo
+            # negativo (alvo do pulo da condição), mandando as duas mensagens
+            # ao mesmo contato.
+            _finish(run, ScriptRun.STATUS_CONCLUIDO)
     except Exception as exc:  # noqa: BLE001 — nunca deixa o worker cair; registra e para o run
         logger.exception('script_run_erro run=%s step=%s', run.id, step.id)
         run.erro = str(exc)[:2000]

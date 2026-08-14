@@ -467,6 +467,90 @@ class TesteDeRoteiroMostraErroTests(TestCase):
         self.assertTrue(any('só envia entre' in txt for _, txt in avisos), avisos)
 
 
+class PassoEncerrarTests(TestCase):
+    """
+    Um funil com dois ramos (condição → mensagem A / mensagem B) só funciona
+    se o ramo de cima puder TERMINAR. Sem isso, o passo de mensagem sempre
+    avança para `ordem + 1` e o ramo positivo escorrega para dentro do ramo
+    negativo, enviando as duas mensagens ao mesmo contato.
+    """
+
+    def setUp(self):
+        from core.factories import make_contact, make_instance, make_message, make_script, make_user
+
+        self.owner = make_user(email='encerrar@teste.com')
+        self.script = make_script(owner=self.owner)
+        self.instance = make_instance(owner=self.owner)
+        self.contact = make_contact(owner=self.owner)
+
+        # Mesma forma do funil real: aguarda a resposta, condiciona, e cada
+        # ramo tem sua própria mensagem.
+        self.aguardar = ScriptStep.objects.create(
+            script=self.script, ordem=1, tipo=ScriptStep.TIPO_AGUARDAR_RESPOSTA
+        )
+        self.condicao = ScriptStep.objects.create(
+            script=self.script,
+            ordem=2,
+            tipo=ScriptStep.TIPO_CONDICAO,
+            condicao_contem='nao, sem interesse',
+        )
+        self.link = ScriptStep.objects.create(
+            script=self.script,
+            ordem=3,
+            tipo=ScriptStep.TIPO_MENSAGEM,
+            message=make_message(owner=self.owner, titulo='Link', conteudo='aqui esta o link'),
+        )
+        self.encerrar = ScriptStep.objects.create(script=self.script, ordem=4, tipo=ScriptStep.TIPO_ENCERRAR)
+        self.recusa = ScriptStep.objects.create(
+            script=self.script,
+            ordem=5,
+            tipo=ScriptStep.TIPO_MENSAGEM,
+            message=make_message(owner=self.owner, titulo='Recusa', conteudo='tudo bem, obrigado'),
+        )
+        self.condicao.proximo_passo = self.recusa
+        self.condicao.save()
+
+    def _enviar(self, texto):
+        """Retoma o run parado no 'aguardar resposta' e devolve as mensagens despachadas."""
+        enviadas = []
+        run = ScriptRun.objects.create(
+            script=self.script,
+            contact=self.contact,
+            instance=self.instance,
+            passo_atual=self.aguardar,
+        )
+        with patch('antiblock.services.dispatch') as mock_dispatch:
+            mock_dispatch.side_effect = lambda inst, numero, texto: enviadas.append(texto) or {'key': {'id': 'X'}}
+            services._resume_run(run, texto)
+        run.refresh_from_db()
+        return enviadas, run
+
+    def test_ramo_positivo_nao_envia_a_mensagem_do_ramo_negativo(self):
+        enviadas, run = self._enviar('sim, pode mandar')
+
+        self.assertEqual(enviadas, ['aqui esta o link'])
+        self.assertEqual(run.status, ScriptRun.STATUS_CONCLUIDO)
+
+    def test_ramo_negativo_envia_so_a_recusa(self):
+        enviadas, run = self._enviar('nao quero')
+
+        self.assertEqual(enviadas, ['tudo bem, obrigado'])
+        self.assertEqual(run.status, ScriptRun.STATUS_CONCLUIDO)
+
+    def test_passo_encerrar_conclui_o_run(self):
+        run = ScriptRun.objects.create(
+            script=self.script,
+            contact=self.contact,
+            instance=self.instance,
+            passo_atual=self.encerrar,
+        )
+
+        services.execute_step(run)
+
+        run.refresh_from_db()
+        self.assertEqual(run.status, ScriptRun.STATUS_CONCLUIDO)
+
+
 class ScriptToggleIAViewTests(TestCase):
     def setUp(self):
         from core.factories import make_script, make_user

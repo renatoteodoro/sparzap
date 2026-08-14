@@ -32,12 +32,14 @@ class ScriptStep(BaseModel):
     TIPO_AGUARDAR_RESPOSTA = 'aguardar_resposta'
     TIPO_CONDICAO = 'condicao'
     TIPO_MUDAR_ETAPA = 'mudar_etapa'
+    TIPO_ENCERRAR = 'encerrar'
     TIPO_CHOICES = [
         (TIPO_MENSAGEM, 'Enviar mensagem'),
         (TIPO_DELAY, 'Aguardar (delay fixo)'),
         (TIPO_AGUARDAR_RESPOSTA, 'Aguardar resposta'),
         (TIPO_CONDICAO, 'Condição (se a resposta contiver X)'),
         (TIPO_MUDAR_ETAPA, 'Mudar etapa do lead'),
+        (TIPO_ENCERRAR, 'Encerrar (fim deste ramo)'),
     ]
 
     script = models.ForeignKey(Script, on_delete=models.CASCADE, related_name='steps')
