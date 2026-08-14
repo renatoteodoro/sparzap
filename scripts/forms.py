@@ -27,6 +27,9 @@ class ScriptStepForm(forms.ModelForm):
             'condicao_contem',
             'proximo_passo',
             'etapa_destino',
+            'usar_ia',
+            'ia_config',
+            'condicao_ia_descricao',
         ]
 
     def __init__(self, *args, script=None, owner=None, **kwargs):
@@ -35,9 +38,11 @@ class ScriptStepForm(forms.ModelForm):
         if script is not None:
             self.fields['proximo_passo'].queryset = script.steps.all()
         if owner is not None:
+            from ai.models import AIConfig
             from library.models import Message
 
             self.fields['message'].queryset = Message.objects.filter(owner=owner)
+            self.fields['ia_config'].queryset = AIConfig.objects.filter(owner=owner, ativo=True)
 
 
 class TestRunForm(forms.Form):

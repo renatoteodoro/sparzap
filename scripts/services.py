@@ -165,6 +165,11 @@ def _resolve_condicao(script, step, texto):
     Se `step` for do tipo condição, resolve o alvo comparando `texto`; senão
     retorna o próprio `step`.
 
+    Se o passo tiver `usar_ia` ligado e uma `ia_config` configurada, tenta
+    classificar a resposta via IA primeiro. Se a IA responder com sucesso
+    (True/False), o resultado dela decide o desvio. Se a IA falhar ou não
+    estiver configurada, cai no matching por palavra-chave de sempre.
+
     `condicao_contem` aceita vários termos separados por vírgula e casa se
     QUALQUER um aparecer na resposta. A comparação ignora maiúsculas E
     acentos — quem responde pelo celular escreve "nao", "vc", "obrigado" sem
@@ -173,6 +178,14 @@ def _resolve_condicao(script, step, texto):
     """
     if step is None or step.tipo != ScriptStep.TIPO_CONDICAO:
         return step
+
+    if step.usar_ia and step.ia_config_id:
+        from ai.services import classificar  # Sprint 20: IA nos passos de condição
+
+        resultado_ia = classificar(step.ia_config, step.condicao_ia_descricao, texto)
+        if resultado_ia is not None:
+            return step.proximo_passo if (resultado_ia and step.proximo_passo) else next_step(step)
+        logger.warning('script_ia_fallback_keyword script=%s step=%s', script.id, step.id)
 
     from core.text import contem_algum, separar_termos
 

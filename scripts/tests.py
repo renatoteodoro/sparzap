@@ -147,6 +147,69 @@ class CondicaoMultiTermoTests(TestCase):
         self.assertEqual(self._resolve('qualquer coisa'), self.segue)
 
 
+class CondicaoComIATests(TestCase):
+    """
+    Passo de condição com `usar_ia` ligado consulta a IA primeiro; se ela
+    responder com sucesso, o resultado dela decide o desvio. Se falhar
+    (retorna None) ou `usar_ia` estiver desligado, cai no matching por
+    palavra-chave de sempre -- sem essa regra, "não sei, mas pode mandar"
+    seria classificado como negativo só por conter "nao".
+    """
+
+    def setUp(self):
+        from core.factories import make_ai_config, make_script, make_user
+
+        self.owner = make_user(email='ia-cond@teste.com')
+        self.script = make_script(owner=self.owner)
+        self.ia_config = make_ai_config(owner=self.owner)
+        self.condicao = ScriptStep.objects.create(
+            script=self.script,
+            ordem=1,
+            tipo=ScriptStep.TIPO_CONDICAO,
+            usar_ia=True,
+            ia_config=self.ia_config,
+            condicao_ia_descricao='o contato aceitou o convite',
+            condicao_contem='nao, sem interesse',
+        )
+        self.segue = ScriptStep.objects.create(script=self.script, ordem=2, tipo=ScriptStep.TIPO_MENSAGEM)
+        self.desvio = ScriptStep.objects.create(script=self.script, ordem=3, tipo=ScriptStep.TIPO_MENSAGEM)
+        self.condicao.proximo_passo = self.desvio
+        self.condicao.save()
+
+    def _resolve(self, texto):
+        return services._resolve_condicao(self.script, self.condicao, texto)
+
+    @patch('ai.services.classificar')
+    def test_ia_retorna_true_desvia_para_o_passo_alvo(self, mock_classificar):
+        mock_classificar.return_value = True
+
+        self.assertEqual(self._resolve('não sei, mas pode mandar'), self.desvio)
+        mock_classificar.assert_called_once_with(
+            self.ia_config, 'o contato aceitou o convite', 'não sei, mas pode mandar',
+        )
+
+    @patch('ai.services.classificar')
+    def test_ia_retorna_false_segue_o_fluxo_normal(self, mock_classificar):
+        mock_classificar.return_value = False
+
+        self.assertEqual(self._resolve('não quero'), self.segue)
+
+    @patch('ai.services.classificar')
+    def test_ia_falha_cai_no_matching_por_palavra_chave(self, mock_classificar):
+        mock_classificar.return_value = None
+
+        # 'nao' bate em condicao_contem -- comportamento identico ao atual
+        self.assertEqual(self._resolve('nao quero'), self.desvio)
+
+    def test_usar_ia_desligado_nunca_chama_a_ia(self):
+        self.condicao.usar_ia = False
+        self.condicao.save()
+
+        with patch('ai.services.classificar') as mock_classificar:
+            self._resolve('qualquer coisa')
+            mock_classificar.assert_not_called()
+
+
 class ExplicarErroTests(TestCase):
     """O teste de roteiro precisa dizer POR QUE falhou, não só 'status: Erro'."""
 
