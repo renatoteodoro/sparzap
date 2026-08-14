@@ -9,6 +9,19 @@ from decouple import Csv, config
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 SECRET_KEY = config('SECRET_KEY', default='django-insecure-dev-key-troque-em-producao')
+
+# Cifra as API keys de IA em repouso (ai.crypto). Em produção, defina de
+# verdade em .env — gere com:
+#   python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
+# Sem a variável (dev/teste), deriva uma chave determinística do SECRET_KEY
+# para não exigir configuração extra — nunca use esse fallback em produção.
+AI_FIELD_ENCRYPTION_KEY = config('AI_FIELD_ENCRYPTION_KEY', default='')
+if not AI_FIELD_ENCRYPTION_KEY:
+    import base64
+    import hashlib
+
+    AI_FIELD_ENCRYPTION_KEY = base64.urlsafe_b64encode(hashlib.sha256(SECRET_KEY.encode()).digest()).decode()
+
 DEBUG = config('DEBUG', default=True, cast=bool)
 ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='localhost,127.0.0.1', cast=Csv())
 if DEBUG and 'testserver' not in ALLOWED_HOSTS:
@@ -53,6 +66,7 @@ INSTALLED_APPS = [
     'crm',
     'reports',
     'api',
+    'ai',
 ]
 
 MIDDLEWARE = [
