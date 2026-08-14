@@ -30,6 +30,7 @@ Navegador ──HTTP──> Django (web)  ──HTTP──> Evolution API ──
 | `triggers` | Gatilhos por palavra-chave e mensagens agendadas (follow-up) | `/gatilhos/` |
 | `crm` | Pipeline, etapas, leads, histórico de conversa | `/crm/` |
 | `reports` | Relatórios de entrega e backup/restauração de configuração | `/relatorios/` |
+| `ai` | Configurações de IA por conta (provedor, modelo, API key) usadas pelo passo de condição dos scripts | `/ia/` |
 | `api` | API REST (DRF) com autenticação por token | `/api/` |
 
 `core` acumula dois papéis: é o pacote do projeto Django (settings, wsgi,

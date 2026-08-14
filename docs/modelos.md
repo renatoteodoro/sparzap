@@ -80,7 +80,7 @@ a cada envio (`library.services.pick_variant`).
 | `mensagem` | `message` |
 | `delay` | `delay_s` |
 | `aguardar_resposta` | `timeout_h` (padrão 48) |
-| `condicao` | `condicao_contem`, `proximo_passo` (destino se a condição casar) |
+| `condicao` | `condicao_contem`, `proximo_passo` (destino se a condição casar), `usar_ia`/`ia_config`/`condicao_ia_descricao` (classificação por IA, opcional — cai em `condicao_contem` se falhar) |
 | `mudar_etapa` | `etapa_destino` (nome da etapa no CRM) |
 
 **`ScriptRun`** — execução do script para um contato.
@@ -88,6 +88,22 @@ a cada envio (`library.services.pick_variant`).
 `cancelado` · `erro`. `origem`: `teste` ou `campanha`.
 Guarda `passo_atual`, `ultimo_message_id` e `contexto_extra` (JSON com as
 variáveis disponíveis para renderizar a mensagem).
+
+## ai
+
+**`AIConfig`** — credencial de IA configurada por conta (dono), usada
+pelo passo "condição" dos scripts quando `usar_ia` está ligado.
+
+| Campo | Observação |
+|---|---|
+| `provider` | `anthropic` · `openai` · `gemini` · `openai_compativel` (URL própria, ex.: OpenCode Zen) |
+| `modelo` | String livre — ex. `claude-opus-5`, `gpt-5`, `gemini-2.5-flash` |
+| `api_key_cifrada` | Nunca em texto puro; acesse via a property `api_key` (cifra/decifra com Fernet, `ai.crypto`) |
+| `base_url` | Só usado quando `provider = openai_compativel` |
+
+`ai.services.classificar(config, descricao, texto)` retorna `True`/`False`
+se a IA respondeu com sucesso, ou `None` se falhou — `scripts.services.
+_resolve_condicao` cai no `condicao_contem` de sempre quando recebe `None`.
 
 ## campaigns
 
