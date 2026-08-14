@@ -50,6 +50,16 @@ class ScriptDeleteView(OwnedQuerysetMixin, DeleteView):
     success_url = reverse_lazy('scripts:list')
 
 
+class ScriptToggleIAView(LoginRequiredMixin, View):
+    def post(self, request, pk):
+        script = get_object_or_404(Script.objects.filter(owner=request.user), pk=pk)
+        script.usar_ia = not script.usar_ia
+        script.save(update_fields=['usar_ia', 'updated_at'])
+        estado = 'ligada' if script.usar_ia else 'desligada'
+        messages.success(request, f'IA {estado} para este script.')
+        return redirect('scripts:detail', pk=pk)
+
+
 class ScriptDetailView(OwnedQuerysetMixin, DetailView):
     model = Script
     template_name = 'scripts/detail.html'

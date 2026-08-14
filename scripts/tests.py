@@ -235,6 +235,19 @@ class CondicaoComIATests(TestCase):
         # 'nao' bate em condicao_contem -- cai no fallback de palavra-chave
         self.assertEqual(resultado, self.desvio)
 
+    def test_script_com_ia_desligada_nunca_chama_a_ia(self):
+        # Interruptor geral do script (Script.usar_ia): desligado, nenhum
+        # passo do script consulta IA, mesmo com usar_ia=True e ia_config
+        # ativa no passo -- é o "kill switch" da tela do script.
+        self.script.usar_ia = False
+        self.script.save()
+
+        with patch('ai.services.classificar', autospec=True) as mock_classificar:
+            resultado = self._resolve('nao quero')
+            mock_classificar.assert_not_called()
+        # 'nao' bate em condicao_contem -- cai no fallback de palavra-chave
+        self.assertEqual(resultado, self.desvio)
+
 
 class ResolveCondicaoIAEndToEndTests(TestCase):
     """
@@ -438,3 +451,40 @@ class TesteDeRoteiroMostraErroTests(TestCase):
         self.assertTrue(any(tag == 'error' for tag, _ in avisos), avisos)
         self.assertFalse(any(tag == 'success' for tag, _ in avisos), avisos)
         self.assertTrue(any('só envia entre' in txt for _, txt in avisos), avisos)
+
+
+class ScriptToggleIAViewTests(TestCase):
+    def setUp(self):
+        from core.factories import make_script, make_user
+
+        self.owner = make_user(email='toggle-ia@teste.com')
+        self.script = make_script(owner=self.owner)  # usar_ia=True por padrão
+        self.client.force_login(self.owner)
+
+    def test_post_desliga_a_ia(self):
+        r = self.client.post(f'/scripts/{self.script.pk}/ia/toggle/', follow=True)
+        self.script.refresh_from_db()
+        self.assertFalse(self.script.usar_ia)
+        self.assertEqual(r.status_code, 200)
+
+    def test_post_de_novo_liga_a_ia(self):
+        self.client.post(f'/scripts/{self.script.pk}/ia/toggle/')
+        self.client.post(f'/scripts/{self.script.pk}/ia/toggle/')
+        self.script.refresh_from_db()
+        self.assertTrue(self.script.usar_ia)
+
+    def test_get_nao_e_permitido(self):
+        r = self.client.get(f'/scripts/{self.script.pk}/ia/toggle/')
+        self.assertEqual(r.status_code, 405)
+
+    def test_nao_deixa_alternar_script_de_outro_dono(self):
+        from core.factories import make_script, make_user
+
+        outro_dono = make_user(email='outro-toggle@teste.com')
+        script_alheio = make_script(owner=outro_dono)
+
+        r = self.client.post(f'/scripts/{script_alheio.pk}/ia/toggle/')
+
+        self.assertEqual(r.status_code, 404)
+        script_alheio.refresh_from_db()
+        self.assertTrue(script_alheio.usar_ia)

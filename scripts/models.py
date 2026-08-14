@@ -11,6 +11,11 @@ class Script(BaseModel):
     owner = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='scripts')
     nome = models.CharField('nome', max_length=150)
     descricao = models.TextField('descrição', blank=True)
+    usar_ia = models.BooleanField(
+        'usar IA nos passos de condição',
+        default=True,
+        help_text='Interruptor geral: desligado, nenhum passo deste script consulta IA, mesmo configurada.',
+    )
 
     class Meta:
         verbose_name = 'script'

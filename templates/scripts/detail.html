@@ -2,6 +2,14 @@
 {% block title %}{{ script.nome }} — Sparzap{% endblock %}
 {% block page_title %}{{ script.nome }}{% endblock %}
 {% block topbar_extra %}
+<form method="post" action="{% url 'scripts:toggle_ia' script.pk %}">
+  {% csrf_token %}
+  {% if script.usar_ia %}
+  <button type="submit" class="border border-dark-green text-dark-green rounded-link px-4 py-2 text-sm">🤖 IA: Ligada</button>
+  {% else %}
+  <button type="submit" class="border border-silver text-cool-gray rounded-link px-4 py-2 text-sm">🤖 IA: Desligada</button>
+  {% endif %}
+</form>
 <form method="post" action="{% url 'scripts:duplicate' script.pk %}">{% csrf_token %}<button type="submit" class="border border-silver rounded-link px-4 py-2 text-sm">Duplicar</button></form>
 <a href="{% url 'scripts:update' script.pk %}" class="border border-silver rounded-link px-4 py-2 text-sm">Editar dados</a>
 <a href="{% url 'scripts:delete' script.pk %}" class="border border-danger text-danger rounded-link px-4 py-2 text-sm">Remover script</a>
