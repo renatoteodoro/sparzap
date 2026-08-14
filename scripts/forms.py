@@ -44,6 +44,15 @@ class ScriptStepForm(forms.ModelForm):
             self.fields['message'].queryset = Message.objects.filter(owner=owner)
             self.fields['ia_config'].queryset = AIConfig.objects.filter(owner=owner, ativo=True)
 
+    def clean(self):
+        cleaned_data = super().clean()
+        if cleaned_data.get('usar_ia') and not cleaned_data.get('condicao_ia_descricao'):
+            self.add_error(
+                'condicao_ia_descricao',
+                'Obrigatório quando "usar IA" está marcado: é o que a IA usa para classificar a resposta.',
+            )
+        return cleaned_data
+
 
 class TestRunForm(forms.Form):
     contact = forms.ModelChoiceField(queryset=None, label='Contato')

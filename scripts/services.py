@@ -165,10 +165,14 @@ def _resolve_condicao(script, step, texto):
     Se `step` for do tipo condição, resolve o alvo comparando `texto`; senão
     retorna o próprio `step`.
 
-    Se o passo tiver `usar_ia` ligado e uma `ia_config` configurada, tenta
-    classificar a resposta via IA primeiro. Se a IA responder com sucesso
-    (True/False), o resultado dela decide o desvio. Se a IA falhar ou não
-    estiver configurada, cai no matching por palavra-chave de sempre.
+    Se o passo tiver `usar_ia` ligado, uma `ia_config` configurada e ativa, e
+    houver texto de fato (um timeout sem resposta chega aqui com `texto=''` e
+    não deve ser mandado pra IA — não há o que classificar, e um vazio
+    classificado por engano pode desviar o run sem nenhuma resposta real do
+    contato), tenta classificar a resposta via IA primeiro. Se a IA responder
+    com sucesso (True/False), o resultado dela decide o desvio. Se a IA
+    falhar, estiver desativada ou não estiver configurada, cai no matching
+    por palavra-chave de sempre.
 
     `condicao_contem` aceita vários termos separados por vírgula e casa se
     QUALQUER um aparecer na resposta. A comparação ignora maiúsculas E
@@ -179,7 +183,7 @@ def _resolve_condicao(script, step, texto):
     if step is None or step.tipo != ScriptStep.TIPO_CONDICAO:
         return step
 
-    if step.usar_ia and step.ia_config_id:
+    if step.usar_ia and step.ia_config_id and step.ia_config.ativo and (texto or '').strip():
         from ai.services import classificar  # Sprint 20: IA nos passos de condição
 
         resultado_ia = classificar(step.ia_config, step.condicao_ia_descricao, texto)

@@ -46,7 +46,7 @@ def classificar(config, descricao, texto):
 def _chamar_anthropic(config, prompt):
     import anthropic
 
-    client = anthropic.Anthropic(api_key=config.api_key, timeout=TIMEOUT_S)
+    client = anthropic.Anthropic(api_key=config.api_key, timeout=TIMEOUT_S, max_retries=0)
     resposta = client.messages.create(
         model=config.modelo,
         max_tokens=16,
@@ -62,10 +62,11 @@ def _chamar_openai(config, prompt):
         api_key=config.api_key,
         base_url=config.base_url or None,
         timeout=TIMEOUT_S,
+        max_retries=0,
     )
     resposta = client.chat.completions.create(
         model=config.modelo,
-        max_tokens=16,
+        max_completion_tokens=16,
         messages=[{'role': 'user', 'content': prompt}],
     )
     return resposta.choices[0].message.content or ''

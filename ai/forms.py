@@ -27,6 +27,15 @@ class AIConfigForm(forms.ModelForm):
         else:
             self.fields['api_key'].required = True
 
+    def clean(self):
+        cleaned_data = super().clean()
+        if cleaned_data.get('provider') == AIConfig.PROVIDER_OPENAI_COMPATIVEL and not cleaned_data.get('base_url'):
+            self.add_error(
+                'base_url',
+                'Obrigatório para o provedor "Compatível com OpenAI" (ex.: OpenCode Zen, OpenRouter).',
+            )
+        return cleaned_data
+
     def save(self, commit=True):
         instance = super().save(commit=False)
         nova_chave = self.cleaned_data.get('api_key')

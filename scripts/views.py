@@ -77,6 +77,9 @@ class ScriptDuplicateView(LoginRequiredMixin, View):
                 timeout_h=step.timeout_h,
                 condicao_contem=step.condicao_contem,
                 etapa_destino=step.etapa_destino,
+                usar_ia=step.usar_ia,
+                ia_config=step.ia_config,
+                condicao_ia_descricao=step.condicao_ia_descricao,
             )
             mapa_passos[step.id] = novo
         for step in original.steps.all():

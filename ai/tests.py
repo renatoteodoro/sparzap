@@ -6,6 +6,7 @@ from core.factories import make_ai_config
 
 from . import services
 from .crypto import decrypt_api_key, encrypt_api_key
+from .forms import AIConfigForm
 from .models import AIConfig
 
 
@@ -44,7 +45,9 @@ class ClassificarAnthropicTests(TestCase):
         resultado = services.classificar(self.config, 'quer o link', 'sim quero')
 
         self.assertTrue(resultado)
-        mock_anthropic_cls.assert_called_once_with(api_key=self.config.api_key, timeout=services.TIMEOUT_S)
+        mock_anthropic_cls.assert_called_once_with(
+            api_key=self.config.api_key, timeout=services.TIMEOUT_S, max_retries=0
+        )
 
     @patch('anthropic.Anthropic')
     def test_ia_responde_nao_retorna_false(self, mock_anthropic_cls):
@@ -89,6 +92,7 @@ class ClassificarOpenAITests(TestCase):
             api_key=self.config.api_key,
             base_url=None,
             timeout=services.TIMEOUT_S,
+            max_retries=0,
         )
 
 
@@ -111,6 +115,7 @@ class ClassificarOpenAICompativelTests(TestCase):
             api_key=self.config.api_key,
             base_url=self.config.base_url,
             timeout=services.TIMEOUT_S,
+            max_retries=0,
         )
 
 
@@ -126,6 +131,36 @@ class ClassificarGeminiTests(TestCase):
 
         self.assertTrue(resultado)
         mock_client_cls.assert_called_once()
+
+
+class AIConfigFormTests(TestCase):
+    """`base_url` é obrigatório para "Compatível com OpenAI" -- o próprio
+    help_text do campo já diz isso; o form precisa aplicar, não só avisar."""
+
+    def _dados(self, **overrides):
+        dados = {
+            'nome': 'Minha Config',
+            'provider': AIConfig.PROVIDER_OPENAI_COMPATIVEL,
+            'modelo': 'algum-modelo',
+            'api_key': 'sk-teste',
+            'base_url': '',
+            'ativo': 'on',
+        }
+        dados.update(overrides)
+        return dados
+
+    def test_openai_compativel_sem_base_url_e_invalido(self):
+        form = AIConfigForm(self._dados())
+        self.assertFalse(form.is_valid())
+        self.assertIn('base_url', form.errors)
+
+    def test_openai_compativel_com_base_url_e_valido(self):
+        form = AIConfigForm(self._dados(base_url='https://opencode-zen.exemplo/v1'))
+        self.assertTrue(form.is_valid(), form.errors)
+
+    def test_outro_provider_sem_base_url_e_valido(self):
+        form = AIConfigForm(self._dados(provider=AIConfig.PROVIDER_ANTHROPIC, modelo='claude-opus-5'))
+        self.assertTrue(form.is_valid(), form.errors)
 
 
 class AIConfigViewsTests(TestCase):

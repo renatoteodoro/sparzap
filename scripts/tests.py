@@ -1,4 +1,4 @@
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 from django.test import TestCase
 
@@ -7,6 +7,7 @@ from contacts.models import Contact
 from instances.models import Instance
 
 from . import services
+from .forms import ScriptStepForm
 from .models import Script, ScriptRun, ScriptStep
 
 
@@ -179,7 +180,7 @@ class CondicaoComIATests(TestCase):
     def _resolve(self, texto):
         return services._resolve_condicao(self.script, self.condicao, texto)
 
-    @patch('ai.services.classificar')
+    @patch('ai.services.classificar', autospec=True)
     def test_ia_retorna_true_desvia_para_o_passo_alvo(self, mock_classificar):
         mock_classificar.return_value = True
 
@@ -190,13 +191,13 @@ class CondicaoComIATests(TestCase):
             'não sei, mas pode mandar',
         )
 
-    @patch('ai.services.classificar')
+    @patch('ai.services.classificar', autospec=True)
     def test_ia_retorna_false_segue_o_fluxo_normal(self, mock_classificar):
         mock_classificar.return_value = False
 
         self.assertEqual(self._resolve('não quero'), self.segue)
 
-    @patch('ai.services.classificar')
+    @patch('ai.services.classificar', autospec=True)
     def test_ia_falha_cai_no_matching_por_palavra_chave(self, mock_classificar):
         mock_classificar.return_value = None
 
@@ -207,9 +208,143 @@ class CondicaoComIATests(TestCase):
         self.condicao.usar_ia = False
         self.condicao.save()
 
-        with patch('ai.services.classificar') as mock_classificar:
+        with patch('ai.services.classificar', autospec=True) as mock_classificar:
             self._resolve('qualquer coisa')
             mock_classificar.assert_not_called()
+
+    def test_texto_vazio_de_timeout_nao_chama_a_ia(self):
+        # Regressao: handle_timeout chama _resume_run(run, texto='') quando o
+        # passo "aguardar resposta" expira sem resposta nenhuma -- mandar essa
+        # string vazia pra IA classificar pode devolver SIM por acidente e
+        # desviar o run sem nenhuma resposta real do contato.
+        with patch('ai.services.classificar', autospec=True) as mock_classificar:
+            resultado = self._resolve('')
+            mock_classificar.assert_not_called()
+        # '' nao bate em nenhum termo de condicao_contem -> fluxo normal
+        self.assertEqual(resultado, self.segue)
+
+    def test_ia_config_inativa_nao_chama_a_ia(self):
+        # Desativar a config na tela de IA (ai/forms.py, templates/ai/list.html)
+        # tem que valer tambem pro motor -- senao "desativar" na UI nao faz nada.
+        self.ia_config.ativo = False
+        self.ia_config.save()
+
+        with patch('ai.services.classificar', autospec=True) as mock_classificar:
+            resultado = self._resolve('nao quero')
+            mock_classificar.assert_not_called()
+        # 'nao' bate em condicao_contem -- cai no fallback de palavra-chave
+        self.assertEqual(resultado, self.desvio)
+
+
+class ResolveCondicaoIAEndToEndTests(TestCase):
+    """
+    Ponta a ponta: exercita `_resolve_condicao` chamando `ai.services.classificar`
+    de verdade, mockando só na borda do SDK (`anthropic.Anthropic`). Um teste
+    que mocka `ai.services.classificar` diretamente não pegaria uma quebra de
+    contrato entre as duas camadas -- como o achado #5 da revisão, em que
+    `_chamar_openai` passava `max_tokens` incompatível com o modelo
+    configurado. Este teste, ao chamar o `classificar` real, pegaria.
+    """
+
+    def setUp(self):
+        from core.factories import make_ai_config, make_script, make_user
+
+        self.owner = make_user(email='ia-e2e@teste.com')
+        self.script = make_script(owner=self.owner)
+        self.ia_config = make_ai_config(owner=self.owner)
+        self.condicao = ScriptStep.objects.create(
+            script=self.script,
+            ordem=1,
+            tipo=ScriptStep.TIPO_CONDICAO,
+            usar_ia=True,
+            ia_config=self.ia_config,
+            condicao_ia_descricao='o contato aceitou o convite',
+        )
+        self.desvio = ScriptStep.objects.create(script=self.script, ordem=2, tipo=ScriptStep.TIPO_MENSAGEM)
+        self.condicao.proximo_passo = self.desvio
+        self.condicao.save()
+
+    @patch('anthropic.Anthropic')
+    def test_ia_real_desvia_para_o_passo_alvo(self, mock_anthropic_cls):
+        bloco = MagicMock(type='text', text='SIM')
+        mock_anthropic_cls.return_value.messages.create.return_value = MagicMock(content=[bloco])
+
+        alvo = services._resolve_condicao(self.script, self.condicao, 'sim, aceito')
+
+        self.assertEqual(alvo, self.desvio)
+
+
+class ScriptStepFormTests(TestCase):
+    """`usar_ia` sem `condicao_ia_descricao` deixa a IA sem critério pra
+    classificar -- o form tem que barrar essa combinação, não deixar passar
+    pra ser descoberta em produção."""
+
+    def setUp(self):
+        from core.factories import make_ai_config, make_script, make_user
+
+        self.owner = make_user(email='stepform@teste.com')
+        self.script = make_script(owner=self.owner)
+        self.ia_config = make_ai_config(owner=self.owner)
+
+    def _dados(self, **overrides):
+        dados = {
+            'ordem': 1,
+            'tipo': ScriptStep.TIPO_CONDICAO,
+            'condicao_contem': '',
+            'usar_ia': True,
+            'ia_config': self.ia_config.pk,
+            'condicao_ia_descricao': '',
+        }
+        dados.update(overrides)
+        return dados
+
+    def test_usar_ia_sem_descricao_e_invalido(self):
+        form = ScriptStepForm(self._dados(), script=self.script, owner=self.owner)
+        self.assertFalse(form.is_valid())
+        self.assertIn('condicao_ia_descricao', form.errors)
+
+    def test_usar_ia_com_descricao_e_valido(self):
+        form = ScriptStepForm(
+            self._dados(condicao_ia_descricao='o contato aceitou o convite'), script=self.script, owner=self.owner
+        )
+        self.assertTrue(form.is_valid(), form.errors)
+
+    def test_usar_ia_desligado_nao_exige_descricao(self):
+        form = ScriptStepForm(self._dados(usar_ia=False, ia_config=''), script=self.script, owner=self.owner)
+        self.assertTrue(form.is_valid(), form.errors)
+
+
+class ScriptDuplicateViewTests(TestCase):
+    """`ScriptDuplicateView` copia cada `ScriptStep` campo a campo -- se um
+    campo novo for adicionado ao model e esquecido aqui, a duplicação some
+    silenciosamente com ele."""
+
+    def setUp(self):
+        from core.factories import make_ai_config, make_script, make_user
+
+        self.owner = make_user(email='dup@teste.com')
+        self.script = make_script(owner=self.owner)
+        self.ia_config = make_ai_config(owner=self.owner)
+        self.condicao = ScriptStep.objects.create(
+            script=self.script,
+            ordem=1,
+            tipo=ScriptStep.TIPO_CONDICAO,
+            usar_ia=True,
+            ia_config=self.ia_config,
+            condicao_ia_descricao='o contato aceitou o convite',
+            condicao_contem='sim',
+        )
+        self.client.force_login(self.owner)
+
+    def test_duplicar_mantem_configuracao_de_ia_do_passo(self):
+        self.client.post(f'/scripts/{self.script.pk}/duplicar/')
+
+        copia = Script.objects.exclude(pk=self.script.pk).get(owner=self.owner)
+        passo_copiado = copia.steps.get(ordem=1)
+
+        self.assertTrue(passo_copiado.usar_ia)
+        self.assertEqual(passo_copiado.ia_config_id, self.ia_config.id)
+        self.assertEqual(passo_copiado.condicao_ia_descricao, self.condicao.condicao_ia_descricao)
 
 
 class ExplicarErroTests(TestCase):
