@@ -23,6 +23,15 @@ _SAFE_RETRY = Retry(
     allowed_methods=frozenset(['GET']),
 )
 
+# Endpoints de grupo da Evolution buscam metadados de CADA grupo, um a um,
+# direto do WhatsApp — numa conta real com dezenas de grupos isso passa
+# facilmente de 90s (medido: 93s para ~40 grupos), e não há cache que
+# ajude: o custo se repete a cada chamada. O timeout padrão de 10s derrubava
+# a sincronização sempre. Estes endpoints usam um timeout próprio e
+# **sem retry**: retentar uma chamada de 90s multiplicaria a espera sem
+# nenhuma chance real de sucesso.
+TIMEOUT_LENTO = 180
+
 
 class EvolutionError(Exception):
     """Erro genérico de comunicação com a Evolution API."""
@@ -55,14 +64,20 @@ class EvolutionClient:
         self.session.mount('http://', HTTPAdapter(max_retries=_SAFE_RETRY))
         self.session.mount('https://', HTTPAdapter(max_retries=_SAFE_RETRY))
 
+        # sessão sem retry, para os endpoints lentos (ver TIMEOUT_LENTO)
+        self.session_sem_retry = requests.Session()
+
     def _headers(self):
         return {'apikey': self.api_key, 'Content-Type': 'application/json'}
 
-    def _request(self, method, path, **kwargs):
+    def _request(self, method, path, timeout=None, retry=True, **kwargs):
         url = f'{self.base_url}{path}'
+        session = self.session if retry else self.session_sem_retry
         started = time.monotonic()
         try:
-            response = self.session.request(method, url, headers=self._headers(), timeout=self.timeout, **kwargs)
+            response = session.request(
+                method, url, headers=self._headers(), timeout=timeout or self.timeout, **kwargs
+            )
         except requests.exceptions.RequestException as exc:
             logger.warning(
                 'evolution_request_failed method=%s path=%s error=%s latency_ms=%.0f',
@@ -170,12 +185,20 @@ class EvolutionClient:
             'GET',
             f'/group/fetchAllGroups/{instance_name}',
             params={'getParticipants': str(get_participants).lower()},
+            timeout=TIMEOUT_LENTO,
+            retry=False,
         )
 
     def fetch_all_participants(self, instance_name, group_jid):
+        # v2.3.7: o caminho é /group/participants/{instance}?groupJid=...
+        # O formato antigo (/group/fetchAllParticipants/{instance}/{jid})
+        # responde 404 — confirmado contra uma instância real.
         return self._request(
             'GET',
-            f'/group/fetchAllParticipants/{instance_name}/{group_jid}',
+            f'/group/participants/{instance_name}',
+            params={'groupJid': group_jid},
+            timeout=TIMEOUT_LENTO,
+            retry=False,
         )
 
     def update_participant(self, instance_name, group_jid, action, participants):

@@ -4,6 +4,7 @@
 {% block topbar_extra %}
 <form method="post" action="{% url 'scripts:duplicate' script.pk %}">{% csrf_token %}<button type="submit" class="border border-silver rounded-link px-4 py-2 text-sm">Duplicar</button></form>
 <a href="{% url 'scripts:update' script.pk %}" class="border border-silver rounded-link px-4 py-2 text-sm">Editar dados</a>
+<a href="{% url 'scripts:delete' script.pk %}" class="border border-danger text-danger rounded-link px-4 py-2 text-sm">Remover script</a>
 {% endblock %}
 
 {% block app_content %}
@@ -39,6 +40,8 @@
           <div>
             <label class="block text-xs font-medium mb-1" for="{{ field.id_for_label }}">{{ field.label }}</label>
             {{ field }}
+            {% if field.help_text %}<p class="text-xs text-cool-gray mt-1">{{ field.help_text }}</p>{% endif %}
+            {% for erro in field.errors %}<p class="text-xs text-danger mt-1">{{ erro }}</p>{% endfor %}
           </div>
         {% endfor %}
         <button type="submit" class="bg-dark-green text-white rounded-full py-2 text-sm font-semibold">Adicionar</button>

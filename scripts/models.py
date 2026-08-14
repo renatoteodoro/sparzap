@@ -38,17 +38,35 @@ class ScriptStep(BaseModel):
     script = models.ForeignKey(Script, on_delete=models.CASCADE, related_name='steps')
     ordem = models.PositiveIntegerField('ordem')
     tipo = models.CharField('tipo', max_length=20, choices=TIPO_CHOICES)
-    message = models.ForeignKey(Message, on_delete=models.SET_NULL, null=True, blank=True, related_name='+')
+    message = models.ForeignKey(
+        Message, on_delete=models.SET_NULL, null=True, blank=True, related_name='+', verbose_name='mensagem'
+    )
     delay_s = models.PositiveIntegerField('delay (segundos)', null=True, blank=True)
     timeout_h = models.PositiveIntegerField('timeout (horas)', default=48, null=True, blank=True)
-    condicao_contem = models.CharField('resposta contém', max_length=100, blank=True)
+    condicao_contem = models.CharField(
+        'resposta contém (separe por vírgula)',
+        max_length=255,
+        blank=True,
+        help_text=(
+            'Casa se QUALQUER um dos termos aparecer na resposta. '
+            'Maiúsculas e acentos são ignorados — "nao" encontra "Não". '
+            'Ex.: nao, nao quero, sem interesse. '
+            'Evite termos de 1 ou 2 letras: a busca é por trecho, então "n" '
+            'casaria com "mandar".'
+        ),
+    )
     proximo_passo = models.ForeignKey(
         'self',
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
         related_name='alvo_de',
-        help_text='Passo para onde ir se a condição casar (tipo = condição).',
+        verbose_name='próximo passo',
+        help_text=(
+            'Para onde PULAR se a condição casar (tipo = condição). '
+            'Quem não casar segue na ordem normal — por isso condicione nos '
+            'termos negativos e pule a mensagem que não deve ser enviada.'
+        ),
     )
     etapa_destino = models.CharField('etapa destino (crm)', max_length=100, blank=True)
 

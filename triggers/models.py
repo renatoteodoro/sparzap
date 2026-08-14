@@ -13,7 +13,7 @@ class Trigger(BaseModel):
     MODO_CHOICES = [(MODO_OU, 'Qualquer palavra (OU)'), (MODO_E, 'Todas as palavras (E)')]
 
     owner = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='triggers')
-    instance = models.ForeignKey(Instance, on_delete=models.CASCADE, related_name='triggers')
+    instance = models.ForeignKey(Instance, on_delete=models.CASCADE, related_name='triggers', verbose_name='instância')
     nome = models.CharField('nome', max_length=100)
     palavras_chave = models.CharField('palavras-chave (separadas por vírgula)', max_length=255)
     modo = models.CharField('modo', max_length=10, choices=MODO_CHOICES, default=MODO_OU)
@@ -62,7 +62,10 @@ class Trigger(BaseModel):
         return self.nome
 
     def lista_palavras(self):
-        return [p.strip().lower() for p in self.palavras_chave.split(',') if p.strip()]
+        """Termos já normalizados (minúsculas e sem acento) — ver core.text."""
+        from core.text import separar_termos
+
+        return separar_termos(self.palavras_chave)
 
 
 class TriggerLog(BaseModel):
@@ -99,8 +102,10 @@ class ScheduledMsg(BaseModel):
     ORIGEM_CHOICES = [(ORIGEM_MANUAL, 'Agendado manualmente'), (ORIGEM_GATILHO, 'Agendado por gatilho')]
 
     contact = models.ForeignKey(Contact, on_delete=models.CASCADE, related_name='scheduled_messages')
-    instance = models.ForeignKey(Instance, on_delete=models.CASCADE, related_name='scheduled_messages')
-    message = models.ForeignKey(Message, on_delete=models.CASCADE, related_name='+')
+    instance = models.ForeignKey(
+        Instance, on_delete=models.CASCADE, related_name='scheduled_messages', verbose_name='instância'
+    )
+    message = models.ForeignKey(Message, on_delete=models.CASCADE, related_name='+', verbose_name='mensagem')
     data_hora = models.DateTimeField('data e hora do envio')
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=STATUS_PENDENTE)
     origem = models.CharField(max_length=20, choices=ORIGEM_CHOICES, default=ORIGEM_MANUAL)

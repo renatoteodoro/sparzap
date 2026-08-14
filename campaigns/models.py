@@ -32,8 +32,8 @@ class Campaign(BaseModel):
 
     owner = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='campaigns')
     nome = models.CharField('nome', max_length=150)
-    instance = models.ForeignKey(Instance, on_delete=models.CASCADE, related_name='campaigns')
-    script = models.ForeignKey(Script, on_delete=models.CASCADE, related_name='campaigns')
+    instance = models.ForeignKey(Instance, on_delete=models.CASCADE, related_name='campaigns', verbose_name='instância')
+    script = models.ForeignKey(Script, on_delete=models.CASCADE, related_name='campaigns', verbose_name='script')
 
     contatos_avulsos = models.ManyToManyField(Contact, blank=True, related_name='campanhas_avulsas')
     grupos = models.ManyToManyField(Group, blank=True, related_name='campanhas')
@@ -42,7 +42,18 @@ class Campaign(BaseModel):
     agendado_para = models.DateTimeField('agendado para', null=True, blank=True)
     antiduplicacao_dias = models.PositiveIntegerField('anti-duplicação (dias)', default=30)
     filtro_publico = models.CharField('filtro de público', max_length=20, choices=FILTRO_CHOICES, default=FILTRO_TODOS)
-    remover_admin_antes = models.BooleanField('remover admin do bot antes de disparar', default=False)
+    # Nome do campo mantido por compatibilidade (backup/restauração já
+    # exportam essa chave); o rótulo mudou porque o comportamento passou a
+    # incluir a revalidação de administradores — ver start_campaign.
+    remover_admin_antes = models.BooleanField(
+        'revalidar administradores dos grupos antes de disparar',
+        default=False,
+        help_text=(
+            'Reconsulta os grupos no WhatsApp antes do envio para garantir que '
+            'nenhum administrador receba a mensagem, e remove o próprio bot da '
+            'administração dos grupos onde ele for admin.'
+        ),
+    )
 
     class Meta:
         verbose_name = 'campanha'

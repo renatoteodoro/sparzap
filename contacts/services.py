@@ -148,12 +148,15 @@ def export_csv(owner, filtros=None):
 
 
 def sync_groups(instance):
+    """
+    Sincroniza os grupos da instância. **Propaga EvolutionError** de
+    propósito: engolir a exceção aqui fazia a view reportar "0 grupo(s)
+    sincronizado(s)" como *sucesso*, escondendo do usuário que a chamada
+    tinha falhado (timeout, instância fora do ar, apikey errada). Quem
+    chama decide como mostrar o erro.
+    """
     client = EvolutionClient()
-    try:
-        data = client.fetch_all_groups(instance.evolution_instance_name)
-    except EvolutionError as exc:
-        logger.warning('sync_groups_erro instance=%s error=%s', instance.evolution_instance_name, exc)
-        return []
+    data = client.fetch_all_groups(instance.evolution_instance_name)
 
     grupos_criados = []
     for item in data if isinstance(data, list) else data.get('groups', []):
@@ -173,20 +176,34 @@ def sync_groups(instance):
 
 
 def extract_participants(group):
+    """
+    Extrai os participantes de um grupo como contatos.
+
+    **Administradores (`admin` e `superadmin`) são sempre ignorados**: eles
+    nunca viram Contact e nunca entram no público de uma campanha. A regra
+    é do produto — o dono do grupo e seus admins não podem receber disparo
+    do Sparzap de forma nenhuma. Não confundir com rebaixar admin: aqui não
+    se mexe no grupo, apenas não se coleta o contato.
+
+    Propaga EvolutionError — mesmo motivo de `sync_groups`.
+    """
     client = EvolutionClient()
-    try:
-        data = client.fetch_all_participants(group.instance.evolution_instance_name, group.jid)
-    except EvolutionError as exc:
-        logger.warning('extract_participants_erro group=%s error=%s', group.jid, exc)
-        return []
+    data = client.fetch_all_participants(group.instance.evolution_instance_name, group.jid)
 
     participantes = data if isinstance(data, list) else data.get('participants', [])
     numero_do_bot = normalize_br_number(group.instance.numero) if group.instance.numero else None
     bot_encontrado_admin = False
     contatos = []
+    numeros_de_admin = []
 
     for participante in participantes:
-        jid_participante = participante.get('id') or participante.get('jid', '')
+        # A v2.3.7 devolve `id` como LID ("169397956132906@lid") — um
+        # identificador de privacidade do WhatsApp que NÃO contém o telefone;
+        # o número real vem em `phoneNumber`. Usar `id` faria
+        # normalize_br_number devolver None para todo mundo e a extração
+        # terminaria com zero contatos, sem erro nenhum. Versões antigas só
+        # mandavam `id`/`jid` com o telefone, então mantemos o fallback.
+        jid_participante = participante.get('phoneNumber') or participante.get('id') or participante.get('jid', '')
         numero = normalize_br_number(jid_participante)
 
         # so sabemos identificar o proprio bot na lista de participantes
@@ -194,11 +211,19 @@ def extract_participants(group):
         # preenchido a partir do connection.update); sem isso, nao ha campo
         # confiavel e documentado que marque "este participante sou eu".
         e_o_proprio_bot = bool(numero_do_bot and numero == numero_do_bot)
-        if e_o_proprio_bot and participante.get('admin'):
+        # `admin` vem como None, 'admin' ou 'superadmin' (v2.3.7); versoes
+        # antigas mandavam True/False. Qualquer valor preenchido = admin.
+        e_admin = bool(participante.get('admin'))
+
+        if e_o_proprio_bot and e_admin:
             bot_encontrado_admin = True
 
         if not numero or e_o_proprio_bot:
             continue  # o bot nunca deve virar Contact/lead do proprio grupo
+
+        if e_admin:
+            numeros_de_admin.append(numero)
+            continue  # admin/superadmin nunca vira contato nem recebe disparo
 
         contact, _ = Contact.objects.get_or_create(
             owner=group.instance.owner,
@@ -211,6 +236,18 @@ def extract_participants(group):
             defaults={'jid_participante': jid_participante},
         )
         contatos.append(contact)
+
+    # Extracoes feitas ANTES desta regra podem ter criado vinculo de admin
+    # com o grupo; sem remover, `build_audience` continuaria trazendo essa
+    # pessoa pelo caminho do grupo. Reextrair o grupo corrige o historico.
+    # O Contact em si nao e' apagado: ele pode ser membro comum de outro
+    # grupo ou ter sido cadastrado a mao, e apagar seria destrutivo demais.
+    if numeros_de_admin:
+        removidos, _ = GroupMember.objects.filter(
+            group=group, contact__numero_e164__in=numeros_de_admin
+        ).delete()
+        if removidos:
+            logger.info('extract_participants_admins_desvinculados group=%s total=%s', group.jid, removidos)
 
     group.membros_count = len(contatos)
     if bot_encontrado_admin:
@@ -272,6 +309,30 @@ def demote_self(group, modo=AdminActionLog.MODO_MANUAL):
     group.save(update_fields=['bot_e_admin', 'updated_at'])
     AdminActionLog.objects.create(instance=instance, group=group, modo=modo, resultado=AdminActionLog.RESULTADO_SUCESSO)
     return AdminActionLog.RESULTADO_SUCESSO
+
+
+def refresh_group_admins_for_campaign(campaign):
+    """
+    Revalida quem é admin nos grupos-alvo, imediatamente antes do disparo.
+
+    `extract_participants` já ignora admins, mas essa checagem acontece na
+    hora da extração. Se alguém virou admin DEPOIS, continua vinculado ao
+    grupo e entraria no público — a norma do produto é que admin de grupo
+    não recebe mensagem do Sparzap em hipótese nenhuma. Reextrair aqui
+    fecha essa janela e ainda traz quem entrou no grupo nesse meio-tempo.
+
+    Falha de rede não aborta a campanha: seguimos com os vínculos atuais,
+    que já respeitam a regra de admin desde a última extração bem-sucedida.
+    Retorna a lista de grupos que não puderam ser revalidados.
+    """
+    nao_revalidados = []
+    for group in campaign.grupos.all():
+        try:
+            extract_participants(group)
+        except EvolutionError as exc:
+            logger.warning('refresh_group_admins_erro group=%s error=%s', group.jid, exc)
+            nao_revalidados.append(group)
+    return nao_revalidados
 
 
 def demote_self_for_campaign(campaign):

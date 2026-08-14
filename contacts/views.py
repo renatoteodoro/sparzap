@@ -5,6 +5,7 @@ from django.shortcuts import get_object_or_404, redirect
 from django.urls import reverse_lazy
 from django.views.generic import CreateView, DeleteView, ListView, UpdateView, View
 
+from instances.evolution import EvolutionError
 from instances.models import Instance
 
 from . import services
@@ -60,6 +61,10 @@ class ContactDeleteView(OwnedQuerysetMixin, DeleteView):
     model = Contact
     template_name = 'contacts/confirm_delete.html'
     success_url = reverse_lazy('contacts:list')
+
+    def form_valid(self, form):
+        messages.success(self.request, f'Contato "{self.object}" removido.')
+        return super().form_valid(form)
 
 
 class ContactImportView(LoginRequiredMixin, View):
@@ -126,11 +131,53 @@ class GroupListView(LoginRequiredMixin, ListView):
         return context
 
 
+def _executar_em_background(request, task, *args, rotulo_ok=None, rotulo_fila=None):
+    """
+    Enfileira uma task lenta da Evolution e dá o feedback certo em cada modo.
+
+    Com broker real a task roda em background e a view responde na hora; em
+    modo eager (dev) ela já executou de forma síncrona, então dá para
+    reportar o número real e o erro de verdade — em vez do falso
+    "0 sincronizados" que a versão anterior mostrava como sucesso.
+    """
+    from django.conf import settings
+
+    if not settings.CELERY_TASK_ALWAYS_EAGER:
+        task.delay(*args)
+        messages.info(request, rotulo_fila)
+        return
+
+    # Em modo eager chamamos o corpo da task DIRETAMENTE, sem passar por
+    # apply()/AsyncResult.get(). O `.get()` dispara o guard
+    # `assert_will_not_block` do Celery, que consulta uma flag GLOBAL de
+    # módulo (`celery._state._task_join_will_block`) — não thread-local.
+    # No runserver, que é multi-thread, basta outra requisição estar dentro
+    # de um apply() (ex.: a sincronização de grupos, que leva ~90s) para
+    # esta aqui estourar RuntimeError. Chamar a task como função roda o
+    # mesmo código, devolve o mesmo valor e deixa a exceção propagar.
+    try:
+        total = task(*args)
+    except EvolutionError as exc:
+        messages.error(request, f'Falha ao falar com a Evolution API: {exc}')
+        return
+    messages.success(request, rotulo_ok.format(total=total))
+
+
 class GroupSyncView(LoginRequiredMixin, View):
     def post(self, request, instance_pk):
+        from .tasks import sync_groups_task
+
         instance = get_object_or_404(Instance, pk=instance_pk, owner=request.user)
-        grupos = services.sync_groups(instance)
-        messages.success(request, f'{len(grupos)} grupo(s) sincronizado(s) de "{instance.nome}".')
+        _executar_em_background(
+            request,
+            sync_groups_task,
+            instance.pk,
+            rotulo_ok=f'{{total}} grupo(s) sincronizado(s) de "{instance.nome}".',
+            rotulo_fila=(
+                f'Sincronização dos grupos de "{instance.nome}" iniciada em segundo plano — '
+                'pode levar alguns minutos. Recarregue a página para ver o resultado.'
+            ),
+        )
         return redirect('contacts:groups')
 
 
@@ -159,9 +206,19 @@ class GroupSendMessageView(LoginRequiredMixin, View):
 
 class GroupExtractParticipantsView(LoginRequiredMixin, View):
     def post(self, request, pk):
+        from .tasks import extract_participants_task
+
         group = get_object_or_404(Group, pk=pk, instance__owner=request.user)
-        contatos = services.extract_participants(group)
-        messages.success(request, f'{len(contatos)} participante(s) extraído(s) de "{group.nome}".')
+        _executar_em_background(
+            request,
+            extract_participants_task,
+            group.pk,
+            rotulo_ok=f'{{total}} participante(s) extraído(s) de "{group.nome}".',
+            rotulo_fila=(
+                f'Extração dos participantes de "{group.nome}" iniciada em segundo plano — '
+                'recarregue a página para ver o resultado.'
+            ),
+        )
         return redirect('contacts:groups')
 
 

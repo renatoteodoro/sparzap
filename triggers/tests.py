@@ -172,3 +172,44 @@ class ScheduledMsgTests(TestCase):
         agendada.refresh_from_db()
         self.assertEqual(agendada.status, ScheduledMsg.STATUS_PENDENTE)
         self.assertEqual(agendada.data_hora, nova_data)
+
+
+class GatilhoIgnoraAcentoTests(TestCase):
+    """Gatilho e condição de roteiro seguem a mesma regra (core.text)."""
+
+    def setUp(self):
+        self.owner = User.objects.create_user(email='ac@ac.com', password='x')
+        self.instance = Instance.objects.create(
+            owner=self.owner,
+            nome='I1',
+            evolution_instance_name='i1',
+            status=Instance.STATUS_CONECTADO,
+            janela_inicio=datetime.time(0, 0),
+            janela_fim=datetime.time(23, 59),
+        )
+        self.contact = Contact.objects.create(owner=self.owner, numero_e164='+5511911111111')
+
+    def test_palavra_com_acento_casa_com_texto_sem_acento(self):
+        trigger = Trigger.objects.create(
+            owner=self.owner, instance=self.instance, nome='T', palavras_chave='preço'
+        )
+        for texto in ('qual o preço?', 'qual o preco?', 'QUAL O PRECO'):
+            self.assertEqual(services.match_triggers(self.instance, self.contact, texto), trigger, texto)
+
+    def test_palavra_sem_acento_casa_com_texto_acentuado(self):
+        trigger = Trigger.objects.create(
+            owner=self.owner, instance=self.instance, nome='T', palavras_chave='nao quero'
+        )
+        self.assertEqual(services.match_triggers(self.instance, self.contact, 'Não quero'), trigger)
+
+    def test_modo_e_tambem_ignora_acento(self):
+        trigger = Trigger.objects.create(
+            owner=self.owner,
+            instance=self.instance,
+            nome='T',
+            palavras_chave='endereço, entrega',
+            modo=Trigger.MODO_E,
+        )
+        self.assertEqual(
+            services.match_triggers(self.instance, self.contact, 'qual o endereco de entrega?'), trigger
+        )

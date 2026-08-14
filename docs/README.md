@@ -4,6 +4,12 @@
 roadmap de sprints) fica no [PRD.md](../PRD.md) na raiz do projeto; aqui
 está só o que um dev precisa para trabalhar no código.
 
+## Para quem vai usar o sistema
+
+| Documento | Para quê |
+|---|---|
+| [manual-do-usuario.md](manual-do-usuario.md) | Manual do usuário final, ilustrado — do cadastro à primeira campanha |
+
 ## Comece por aqui
 
 | Documento | Para quê |

@@ -87,8 +87,12 @@ def audience_preview_count(campaign):
 
 def start_campaign(campaign):
     if campaign.remover_admin_antes:
-        from contacts.services import demote_self_for_campaign
+        from contacts.services import demote_self_for_campaign, refresh_group_admins_for_campaign
 
+        # ORDEM IMPORTA: revalidar os admins ANTES de montar o público, senão
+        # o público sai com os vínculos velhos e um admin recém-promovido
+        # receberia o disparo.
+        refresh_group_admins_for_campaign(campaign)
         demote_self_for_campaign(campaign)
 
     build_audience(campaign)

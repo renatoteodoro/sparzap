@@ -7,11 +7,16 @@
 {% block app_content %}
 <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
   {% for script in scripts %}
-  <a href="{% url 'scripts:detail' script.pk %}" class="block bg-surface border border-silver rounded-card p-5 hover:border-dark-green transition-colors">
-    <h3 class="font-sans font-medium mb-1">{{ script.nome }}</h3>
-    <p class="text-sm text-cool-gray mb-2">{{ script.descricao|default:"Sem descrição"|truncatewords:15 }}</p>
-    <p class="text-xs font-mono text-cool-gray">{{ script.steps.count }} passo(s)</p>
-  </a>
+  <div class="bg-surface border border-silver rounded-card p-5 hover:border-dark-green transition-colors">
+    <a href="{% url 'scripts:detail' script.pk %}" class="block">
+      <h3 class="font-sans font-medium mb-1">{{ script.nome }}</h3>
+      <p class="text-sm text-cool-gray mb-2">{{ script.descricao|default:"Sem descrição"|truncatewords:15 }}</p>
+      <p class="text-xs font-mono text-cool-gray">{{ script.steps.count }} passo(s)</p>
+    </a>
+    <div class="mt-3 pt-3 border-t border-silver/50 text-xs">
+      <a href="{% url 'scripts:delete' script.pk %}" class="text-danger hover:underline">remover</a>
+    </div>
+  </div>
   {% empty %}
   <p class="text-sm text-cool-gray">Nenhum script cadastrado ainda.</p>
   {% endfor %}

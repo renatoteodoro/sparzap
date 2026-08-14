@@ -3,7 +3,28 @@
 {% block page_title %}Remover contato{% endblock %}
 {% block app_content %}
 <div class="max-w-md bg-surface border border-silver rounded-card p-6">
-  <p class="text-sm mb-6">Remover o contato <strong>{{ object }}</strong>?</p>
+  <p class="text-sm mb-4">Remover o contato <strong>{{ object }}</strong>?</p>
+
+  <div class="border border-danger/40 bg-danger/10 rounded-link px-4 py-3 mb-6">
+    <p class="text-sm text-danger font-medium mb-2">Esta ação não pode ser desfeita.</p>
+    <p class="text-xs text-cool-gray mb-1">Também serão apagados:</p>
+    <ul class="text-xs text-cool-gray list-disc list-inside space-y-0.5">
+      <li>o lead deste contato no CRM, com anotações e histórico de conversa</li>
+      <li>a participação dele em campanhas já enviadas</li>
+      <li>mensagens agendadas ainda pendentes</li>
+      <li>o vínculo com os grupos e as etiquetas</li>
+    </ul>
+    <p class="text-xs text-cool-gray mt-2">
+      Gatilhos restritos a este contato serão <strong>desativados</strong>.
+    </p>
+  </div>
+
+  <p class="text-xs text-cool-gray mb-6">
+    Se a intenção é só parar de enviar mensagens para esta pessoa, prefira
+    <a href="{% url 'contacts:update' object.pk %}" class="text-blue hover:underline">marcá-la como opt-out</a> —
+    o histórico é preservado e ela nunca mais entra numa campanha.
+  </p>
+
   <form method="post" class="flex gap-2">
     {% csrf_token %}
     <button type="submit" class="bg-danger text-white rounded-full px-5 py-2.5 text-sm font-semibold">Remover</button>

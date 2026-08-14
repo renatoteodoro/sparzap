@@ -8,7 +8,10 @@ logger = logging.getLogger('sparzap')
 
 
 def _normaliza(texto):
-    return (texto or '').lower()
+    """Minúsculas e sem acento — mesma regra usada nas condições de roteiro."""
+    from core.text import normalizar
+
+    return normalizar(texto)
 
 
 def _casa_palavras(trigger, texto_normalizado):

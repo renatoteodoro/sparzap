@@ -1,25 +1,54 @@
 {% if messages %}
-<div class="fixed top-4 right-4 z-[200] flex flex-col gap-2 max-w-sm w-full px-4 sm:px-0">
+{# O container tem pointer-events-none para NUNCA bloquear o clique nos botoes
+   da topbar, que ficam logo atras; so o proprio toast recebe eventos. #}
+<div id="sparzap-toasts"
+     class="fixed top-4 right-4 z-[200] flex flex-col gap-2 max-w-sm w-full px-4 sm:px-0 pointer-events-none">
   {% for message in messages %}
     {% if message.tags == 'success' %}
-      {% with border='border-green' text='text-green' %}
-        <div class="flex items-start gap-2 rounded-link border {{ border }} bg-surface {{ text }} px-4 py-3 text-sm shadow-standard">
-          <span>✅</span><span class="flex-1">{{ message }}</span>
-        </div>
+      {% with cor='green' icone='✅' %}
+      <div class="sparzap-toast pointer-events-auto flex items-start gap-2 rounded-link border border-{{ cor }} bg-surface text-{{ cor }} px-4 py-3 text-sm shadow-standard transition-opacity duration-300"
+           data-vida="5000">
+        <span>{{ icone }}</span><span class="flex-1">{{ message }}</span>
+        <button type="button" data-fechar-toast aria-label="Fechar aviso"
+                class="opacity-60 hover:opacity-100 leading-none text-base">&times;</button>
+      </div>
       {% endwith %}
     {% elif message.tags == 'warning' %}
-      <div class="flex items-start gap-2 rounded-link border border-warning bg-surface text-warning px-4 py-3 text-sm shadow-standard">
+      <div class="sparzap-toast pointer-events-auto flex items-start gap-2 rounded-link border border-warning bg-surface text-warning px-4 py-3 text-sm shadow-standard transition-opacity duration-300"
+           data-vida="9000">
         <span>⚠️</span><span class="flex-1">{{ message }}</span>
+        <button type="button" data-fechar-toast aria-label="Fechar aviso"
+                class="opacity-60 hover:opacity-100 leading-none text-base">&times;</button>
       </div>
     {% elif message.tags == 'error' %}
-      <div class="flex items-start gap-2 rounded-link border border-danger bg-surface text-danger px-4 py-3 text-sm shadow-standard">
+      {# erro fica ate o usuario fechar: costuma trazer instrucao do que fazer #}
+      <div class="sparzap-toast pointer-events-auto flex items-start gap-2 rounded-link border border-danger bg-surface text-danger px-4 py-3 text-sm shadow-standard transition-opacity duration-300">
         <span>⛔</span><span class="flex-1">{{ message }}</span>
+        <button type="button" data-fechar-toast aria-label="Fechar aviso"
+                class="opacity-60 hover:opacity-100 leading-none text-base">&times;</button>
       </div>
     {% else %}
-      <div class="flex items-start gap-2 rounded-link border border-blue bg-surface text-blue px-4 py-3 text-sm shadow-standard">
+      <div class="sparzap-toast pointer-events-auto flex items-start gap-2 rounded-link border border-blue bg-surface text-blue px-4 py-3 text-sm shadow-standard transition-opacity duration-300"
+           data-vida="7000">
         <span>ℹ️</span><span class="flex-1">{{ message }}</span>
+        <button type="button" data-fechar-toast aria-label="Fechar aviso"
+                class="opacity-60 hover:opacity-100 leading-none text-base">&times;</button>
       </div>
     {% endif %}
   {% endfor %}
 </div>
+
+<script>
+  (function () {
+    function remover(toast) {
+      toast.style.opacity = '0';
+      setTimeout(function () { toast.remove(); }, 300);
+    }
+    document.querySelectorAll('#sparzap-toasts .sparzap-toast').forEach(function (toast) {
+      toast.querySelector('[data-fechar-toast]').addEventListener('click', function () { remover(toast); });
+      var vida = parseInt(toast.dataset.vida || '0', 10);
+      if (vida > 0) { setTimeout(function () { remover(toast); }, vida); }
+    });
+  })();
+</script>
 {% endif %}

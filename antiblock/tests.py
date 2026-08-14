@@ -39,12 +39,34 @@ class CanSendTests(TestCase):
         self.assertFalse(permitido)
 
     def test_bloqueia_fora_da_janela(self):
-        self.instance.janela_inicio = datetime.time(1, 0)
-        self.instance.janela_fim = datetime.time(2, 0)
+        # a versao anterior usava a janela 01:00-02:00 e o horario real do
+        # relogio: entre 1h e 2h da manha o proprio teste caia DENTRO da
+        # janela e falhava. Fixamos o "agora" para o teste ser deterministico
+        # a qualquer hora do dia (ver docs/testes.md).
+        self.instance.janela_inicio = datetime.time(8, 0)
+        self.instance.janela_fim = datetime.time(21, 0)
         self.instance.save()
-        permitido, motivo, _ = services.can_send(self.instance)
+
+        # o check de janela acontece antes do de limite diario, entao o
+        # localtime falso nao chega a afetar localdate()/DailyLimit
+        with patch('django.utils.timezone.localtime') as mock_localtime:
+            mock_localtime.return_value = datetime.datetime(2026, 1, 1, 3, 0)
+            permitido, motivo, _ = services.can_send(self.instance)
+
         self.assertFalse(permitido)
         self.assertEqual(motivo, BlockEvent.MOTIVO_FORA_JANELA)
+
+    def test_permite_dentro_da_janela(self):
+        self.instance.janela_inicio = datetime.time(8, 0)
+        self.instance.janela_fim = datetime.time(21, 0)
+        self.instance.save()
+
+        with patch('django.utils.timezone.localtime') as mock_localtime:
+            mock_localtime.return_value = datetime.datetime(2026, 1, 1, 12, 0)
+            permitido, motivo, _ = services.can_send(self.instance)
+
+        self.assertTrue(permitido)
+        self.assertIsNone(motivo)
 
     def test_bloqueia_ao_atingir_limite_diario(self):
         DailyLimit.objects.create(instance=self.instance, data=timezone.localdate(), enviadas=3)

@@ -62,6 +62,18 @@ def execute_step(run):
             run.aguardando_desde = timezone.now()
             run.save(update_fields=['status', 'aguardando_desde', 'updated_at'])
 
+            from django.conf import settings
+
+            if settings.CELERY_TASK_ALWAYS_EAGER:
+                # Em modo eager (dev sem broker real), apply_async(countdown=...)
+                # roda NA HORA e de forma sincrona -- agendar o timeout aqui faria
+                # o run "expirar" no mesmo instante, pulando a espera de verdade
+                # e disparando o proximo passo em seguida (as duas mensagens saem
+                # juntas). Sem Celery real nao ha como agendar um timeout futuro;
+                # quem retoma o run e' resume_waiting_steps, chamado pelo webhook
+                # quando a resposta real chega.
+                return
+
             from .tasks import check_timeout
 
             check_timeout.apply_async(args=[run.id, step.id], countdown=(step.timeout_h or 48) * 3600)
@@ -149,14 +161,60 @@ def _resume_run(run, texto):
 
 
 def _resolve_condicao(script, step, texto):
-    """Se `step` for do tipo condição, resolve o alvo comparando `texto`; senão retorna o próprio `step`."""
+    """
+    Se `step` for do tipo condição, resolve o alvo comparando `texto`; senão
+    retorna o próprio `step`.
+
+    `condicao_contem` aceita vários termos separados por vírgula e casa se
+    QUALQUER um aparecer na resposta. A comparação ignora maiúsculas E
+    acentos — quem responde pelo celular escreve "nao", "vc", "obrigado" sem
+    acentuação, e uma condição que só reconhecesse "não" falharia com a
+    maior parte das pessoas.
+    """
     if step is None or step.tipo != ScriptStep.TIPO_CONDICAO:
         return step
 
-    match = bool(step.condicao_contem) and step.condicao_contem.lower() in (texto or '').lower()
-    if match and step.proximo_passo:
+    from core.text import contem_algum, separar_termos
+
+    if contem_algum(texto, separar_termos(step.condicao_contem)) and step.proximo_passo:
         return step.proximo_passo
     return next_step(step)
+
+
+def explicar_erro(run):
+    """
+    Traduz o erro cru de um ScriptRun em algo que o usuário entenda e possa
+    resolver. O texto guardado em `run.erro` vem de `AntiBlockBlocked` no
+    formato 'motivo: detalhe' — sozinho ele não diz o que fazer.
+    """
+    from antiblock.models import BlockEvent
+
+    erro = (run.erro or '').strip()
+    if not erro:
+        return 'motivo não registrado.'
+
+    motivo, _, detalhe = erro.partition(':')
+    motivo = motivo.strip()
+    detalhe = detalhe.strip()
+    instancia = run.instance
+
+    if motivo == BlockEvent.MOTIVO_FORA_JANELA:
+        agora = timezone.localtime().strftime('%H:%M')
+        return (
+            f'a instância "{instancia.nome}" só envia entre '
+            f'{instancia.janela_inicio:%H:%M} e {instancia.janela_fim:%H:%M}, e agora são {agora}. '
+            'Ajuste a janela na instância ou teste dentro desse horário.'
+        )
+    if motivo == BlockEvent.MOTIVO_LIMITE_DIARIO:
+        return (
+            f'o limite diário da instância "{instancia.nome}" já foi atingido ({detalhe}). '
+            'Aguarde amanhã ou aumente o limite.'
+        )
+    if motivo == BlockEvent.MOTIVO_DESCONECTADO:
+        return f'a instância "{instancia.nome}" não está pronta para enviar ({detalhe}). Reconecte o QR Code.'
+    if motivo == BlockEvent.MOTIVO_RATE_LIMIT:
+        return 'o WhatsApp recusou o envio por excesso de mensagens. Aguarde antes de tentar de novo.'
+    return erro
 
 
 def handle_timeout(run_id, step_id):

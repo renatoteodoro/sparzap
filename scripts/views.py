@@ -6,7 +6,7 @@ from django.views.generic import CreateView, DeleteView, DetailView, ListView, U
 
 from . import services
 from .forms import ScriptForm, ScriptStepForm, TestRunForm
-from .models import Script, ScriptStep
+from .models import Script, ScriptRun, ScriptStep
 
 
 class OwnedQuerysetMixin(LoginRequiredMixin):
@@ -116,7 +116,13 @@ class ScriptTestRunView(LoginRequiredMixin, View):
         form = TestRunForm(request.POST, owner=request.user)
         if form.is_valid():
             run = services.run_test(script, form.cleaned_data['contact'], form.cleaned_data['instance'])
-            messages.success(request, f'Execução de teste iniciada (status: {run.get_status_display()}).')
+            # Um teste que falha nao pode sair como mensagem verde de sucesso:
+            # antes, o usuario via "✅ Execução de teste iniciada (status: Erro)"
+            # sem nenhuma pista do motivo, que fica em `run.erro`.
+            if run.status == ScriptRun.STATUS_ERRO:
+                messages.error(request, f'O teste falhou: {services.explicar_erro(run)}')
+            else:
+                messages.success(request, f'Execução de teste iniciada (status: {run.get_status_display()}).')
         else:
             messages.error(request, 'Selecione um contato e uma instância válidos.')
         return redirect('scripts:detail', pk=pk)

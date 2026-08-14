@@ -70,7 +70,15 @@ Siga esse padrão ao adicionar uma nova — nada de editar o banco na mão.
 | `webhooks.tasks.process_webhook_event` | Recebimento de webhook |
 | `scripts.tasks.continue_after_delay` | Passo do tipo `delay` |
 | `scripts.tasks.check_timeout` | Passo `aguardar_resposta`, agendada para `timeout_h` |
+| `contacts.tasks.sync_groups_task` | Botão "sincronizar grupos"; a chamada da Evolution leva ~90s e não cabe num request |
+| `contacts.tasks.extract_participants_task` | Botão "extrair participantes"; mesmo motivo |
 | `core.tasks.ping` | Diagnóstico manual: confirma que worker/beat executam |
+
+Operações que dependem de endpoint lento da Evolution **não podem** rodar
+dentro do request: em produção o gunicorn mata o worker em 30s (default) e o
+Nginx devolve 504 em 60s. A view enfileira a task e, em modo eager, usa o
+helper `_executar_em_background` de `contacts/views.py` para reportar o
+total real ou o erro de verdade.
 
 ## Como escrever uma task
 

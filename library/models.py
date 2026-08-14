@@ -32,7 +32,15 @@ class Message(BaseModel):
     ]
 
     owner = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='messages')
-    folder = models.ForeignKey(MessageFolder, on_delete=models.SET_NULL, null=True, blank=True, related_name='messages')
+    folder = models.ForeignKey(
+        MessageFolder,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='messages',
+        verbose_name='pasta',
+        help_text='Opcional — serve apenas para organizar a biblioteca.',
+    )
     titulo = models.CharField('título', max_length=150)
     tipo = models.CharField('tipo', max_length=20, choices=TIPO_CHOICES, default=TIPO_TEXTO)
     conteudo = models.TextField('conteúdo/legenda', blank=True)

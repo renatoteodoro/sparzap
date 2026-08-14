@@ -297,3 +297,80 @@ class FailureRateAlertTests(TestCase):
 
         self.assertEqual(check_failure_rates(), 0)
         mock_notify.assert_not_called()
+
+
+class RevalidarAdminsAntesDoDisparoTests(TestCase):
+    """
+    Norma do produto: administrador de grupo nunca recebe mensagem do Sparzap.
+    `extract_participants` garante isso na extração; a opção da campanha
+    revalida imediatamente antes do disparo, fechando a janela de quem virou
+    admin DEPOIS de o grupo ter sido extraído.
+    """
+
+    def setUp(self):
+        from contacts.models import Group, GroupMember
+        from core.factories import make_contact, make_instance, make_script, make_user
+
+        self.owner = make_user(email='reval@teste.com')
+        self.instance = make_instance(owner=self.owner, numero='+5511900000000')
+        self.group = Group.objects.create(instance=self.instance, nome='G', jid='g@g.us')
+
+        # extraidos quando ainda eram membros comuns
+        self.comum = make_contact(owner=self.owner, numero_e164='+5511911110001')
+        self.virou_admin = make_contact(owner=self.owner, numero_e164='+5511911110002')
+        GroupMember.objects.create(group=self.group, contact=self.comum)
+        GroupMember.objects.create(group=self.group, contact=self.virou_admin)
+
+        self.script = make_script(owner=self.owner)
+
+    def _campanha(self, revalidar):
+        campaign = Campaign.objects.create(
+            owner=self.owner,
+            nome='C',
+            instance=self.instance,
+            script=self.script,
+            antiduplicacao_dias=0,
+            remover_admin_antes=revalidar,
+        )
+        campaign.grupos.add(self.group)
+        return campaign
+
+    def _publico(self, campaign):
+        return set(campaign.campaign_contacts.values_list('contact__numero_e164', flat=True))
+
+    @patch('campaigns.tasks.dispatch_campaign.delay')
+    @patch('instances.evolution.EvolutionClient.update_participant')
+    @patch('instances.evolution.EvolutionClient.fetch_all_participants')
+    def test_com_a_opcao_marcada_o_admin_novo_fica_fora_do_publico(self, mock_part, mock_upd, mock_delay):
+        mock_part.return_value = {
+            'participants': [
+                {'phoneNumber': '5511911110001@s.whatsapp.net', 'admin': None},
+                {'phoneNumber': '5511911110002@s.whatsapp.net', 'admin': 'admin'},
+            ]
+        }
+        campaign = self._campanha(revalidar=True)
+        campaigns_services.start_campaign(campaign)
+
+        self.assertEqual(self._publico(campaign), {'+5511911110001'})
+
+    @patch('campaigns.tasks.dispatch_campaign.delay')
+    @patch('instances.evolution.EvolutionClient.fetch_all_participants')
+    def test_sem_a_opcao_o_vinculo_velho_prevalece(self, mock_part, mock_delay):
+        campaign = self._campanha(revalidar=False)
+        campaigns_services.start_campaign(campaign)
+
+        mock_part.assert_not_called()
+        self.assertEqual(self._publico(campaign), {'+5511911110001', '+5511911110002'})
+
+    @patch('campaigns.tasks.dispatch_campaign.delay')
+    @patch('instances.evolution.EvolutionClient.update_participant')
+    @patch('instances.evolution.EvolutionClient.fetch_all_participants')
+    def test_falha_na_evolution_nao_aborta_a_campanha(self, mock_part, mock_upd, mock_delay):
+        from instances.evolution import EvolutionUnavailable
+
+        mock_part.side_effect = EvolutionUnavailable('timeout')
+        campaign = self._campanha(revalidar=True)
+        campaigns_services.start_campaign(campaign)
+
+        campaign.refresh_from_db()
+        self.assertEqual(campaign.status, Campaign.STATUS_EM_ANDAMENTO)
