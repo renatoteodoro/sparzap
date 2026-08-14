@@ -260,7 +260,8 @@ class ResolveCondicaoIAEndToEndTests(TestCase):
             ia_config=self.ia_config,
             condicao_ia_descricao='o contato aceitou o convite',
         )
-        self.desvio = ScriptStep.objects.create(script=self.script, ordem=2, tipo=ScriptStep.TIPO_MENSAGEM)
+        self.segue = ScriptStep.objects.create(script=self.script, ordem=2, tipo=ScriptStep.TIPO_MENSAGEM)
+        self.desvio = ScriptStep.objects.create(script=self.script, ordem=3, tipo=ScriptStep.TIPO_MENSAGEM)
         self.condicao.proximo_passo = self.desvio
         self.condicao.save()
 
@@ -269,9 +270,14 @@ class ResolveCondicaoIAEndToEndTests(TestCase):
         bloco = MagicMock(type='text', text='SIM')
         mock_anthropic_cls.return_value.messages.create.return_value = MagicMock(content=[bloco])
 
+        # 'segue' e' o passo natural (ordem 2); 'desvio' so' e' alcancado se
+        # a IA de verdade (nao mockada) tiver classificado como positivo --
+        # com os dois alvos identicos, o assert nunca discriminaria uma
+        # quebra de contrato entre _resolve_condicao e ai.services.classificar.
         alvo = services._resolve_condicao(self.script, self.condicao, 'sim, aceito')
 
         self.assertEqual(alvo, self.desvio)
+        mock_anthropic_cls.return_value.messages.create.assert_called_once()
 
 
 class ScriptStepFormTests(TestCase):
