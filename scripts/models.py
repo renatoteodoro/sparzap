@@ -68,6 +68,27 @@ class ScriptStep(BaseModel):
             'termos negativos e pule a mensagem que não deve ser enviada.'
         ),
     )
+    usar_ia = models.BooleanField(
+        'usar IA para avaliar a condição',
+        default=False,
+        help_text='Só vale para o tipo "condição". Se a IA falhar, cai no matching por palavra-chave abaixo.',
+    )
+    ia_config = models.ForeignKey(
+        'ai.AIConfig',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='+',
+        verbose_name='configuração de IA',
+    )
+    condicao_ia_descricao = models.TextField(
+        'descrição para a IA',
+        blank=True,
+        help_text=(
+            'O que conta como positivo — ex.: "o contato demonstrou interesse '
+            'em receber o link do grupo".'
+        ),
+    )
     etapa_destino = models.CharField('etapa destino (crm)', max_length=100, blank=True)
 
     class Meta:
