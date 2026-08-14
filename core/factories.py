@@ -59,3 +59,11 @@ def make_campaign(owner=None, instance=None, script=None, nome='Campanha Teste',
     instance = instance or make_instance(owner=owner)
     script = script or make_script(owner=owner)
     return Campaign.objects.create(owner=owner, instance=instance, script=script, nome=nome, **kwargs)
+
+
+def make_ai_config(owner=None, nome='Config IA Teste', modelo='claude-opus-5', api_key='chave-teste-123', **kwargs):
+    from ai.models import AIConfig
+
+    owner = owner or make_user()
+    kwargs.setdefault('provider', AIConfig.PROVIDER_ANTHROPIC)
+    return AIConfig.objects.create(owner=owner, nome=nome, modelo=modelo, api_key=api_key, **kwargs)
