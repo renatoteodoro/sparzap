@@ -28,6 +28,7 @@ urlpatterns = [
     path('crm/', include('crm.urls')),
     path('relatorios/', include('reports.urls')),
     path('aquecimento/', include('antiblock.urls')),
+    path('ia/', include('ai.urls')),
     path('api/', include('api.urls')),
 ]
 

@@ -122,3 +122,61 @@ class ClassificarGeminiTests(TestCase):
 
         self.assertTrue(resultado)
         mock_client_cls.assert_called_once()
+
+
+class AIConfigViewsTests(TestCase):
+    def setUp(self):
+        from core.factories import make_user
+
+        self.owner = make_user(email='view@teste.com')
+        self.client.force_login(self.owner)
+
+    def test_criar_configuracao_cifra_a_api_key(self):
+        r = self.client.post(
+            '/ia/nova/',
+            {
+                'nome': 'Minha Claude',
+                'provider': AIConfig.PROVIDER_ANTHROPIC,
+                'modelo': 'claude-opus-5',
+                'api_key': 'sk-ant-secreta',
+                'base_url': '',
+                'ativo': 'on',
+            },
+            follow=True,
+        )
+        self.assertEqual(r.status_code, 200)
+        config = AIConfig.objects.get(owner=self.owner)
+        self.assertEqual(config.api_key, 'sk-ant-secreta')
+        self.assertNotIn(b'sk-ant-secreta', r.content)
+
+    def test_editar_sem_preencher_api_key_mantem_a_atual(self):
+        config = make_ai_config(owner=self.owner, nome='Original', api_key='chave-original')
+
+        r = self.client.post(
+            f'/ia/{config.pk}/editar/',
+            {
+                'nome': 'Renomeada',
+                'provider': config.provider,
+                'modelo': config.modelo,
+                'api_key': '',
+                'base_url': '',
+                'ativo': 'on',
+            },
+            follow=True,
+        )
+        self.assertEqual(r.status_code, 200)
+        config.refresh_from_db()
+        self.assertEqual(config.nome, 'Renomeada')
+        self.assertEqual(config.api_key, 'chave-original')
+
+    def test_lista_so_mostra_configuracoes_do_dono_logado(self):
+        from core.factories import make_user
+
+        outro_dono = make_user(email='outro@teste.com')
+        make_ai_config(owner=outro_dono, nome='Não é minha')
+        make_ai_config(owner=self.owner, nome='É minha')
+
+        r = self.client.get('/ia/')
+
+        self.assertContains(r, 'É minha')
+        self.assertNotContains(r, 'Não é minha')

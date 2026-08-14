@@ -1,0 +1,13 @@
+{% extends 'base_app.html' %}
+{% block title %}Remover configuração de IA — Sparzap{% endblock %}
+{% block page_title %}Remover configuração de IA{% endblock %}
+{% block app_content %}
+<div class="max-w-md bg-surface border border-silver rounded-card p-6">
+  <p class="text-sm mb-6">Remover a configuração <strong>{{ object.nome }}</strong>? Passos de script que usam essa configuração deixam de usar IA e caem no matching por palavra-chave.</p>
+  <form method="post" class="flex gap-2">
+    {% csrf_token %}
+    <button type="submit" class="bg-danger text-white rounded-full px-5 py-2.5 text-sm font-semibold">Remover</button>
+    <a href="{% url 'ai:list' %}" class="border border-silver rounded-link px-5 py-2.5 text-sm">Cancelar</a>
+  </form>
+</div>
+{% endblock %}

@@ -14,6 +14,7 @@
     {% url 'triggers:list' as url_triggers %}
     {% url 'crm:kanban' as url_crm %}
     {% url 'antiblock:warmup' as url_warmup %}
+    {% url 'ai:list' as url_ai %}
     {% url 'reports:index' as url_reports %}
 
     {% sidebar_link url_dashboard '📊' 'Dashboard' %}
@@ -25,6 +26,7 @@
     {% sidebar_link url_triggers '⚡' 'Gatilhos' %}
     {% sidebar_link url_crm '📇' 'CRM' %}
     {% sidebar_link url_warmup '🔥' 'Aquecimento' %}
+    {% sidebar_link url_ai '🤖' 'IA' %}
     {% sidebar_link url_reports '📈' 'Relatórios' %}
   </nav>
 

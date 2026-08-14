@@ -1,0 +1,26 @@
+{% extends 'base_app.html' %}
+{% block title %}IA — Sparzap{% endblock %}
+{% block page_title %}IA{% endblock %}
+{% block topbar_extra %}
+<a href="{% url 'ai:create' %}" class="bg-dark-green text-white px-4 py-2 rounded-full text-sm font-semibold">+ Nova configuração</a>
+{% endblock %}
+{% block app_content %}
+<div class="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+  {% for config in configs %}
+  <div class="bg-surface border border-silver rounded-card p-5">
+    <div class="flex items-start justify-between mb-2">
+      <h3 class="font-sans font-medium">{{ config.nome }}</h3>
+      <span class="text-xs font-mono uppercase text-cool-gray">{{ config.get_provider_display }}</span>
+    </div>
+    <p class="text-sm text-cool-gray mb-1">Modelo: {{ config.modelo }}</p>
+    <p class="text-sm mb-4">{% if config.ativo %}<span class="text-green">Ativa</span>{% else %}<span class="text-cool-gray">Inativa</span>{% endif %}</p>
+    <div class="flex gap-2">
+      <a href="{% url 'ai:update' config.pk %}" class="flex-1 text-center border border-silver rounded-link py-2 text-sm">Editar</a>
+      <a href="{% url 'ai:delete' config.pk %}" class="text-danger text-sm px-3 py-2">Remover</a>
+    </div>
+  </div>
+  {% empty %}
+  <p class="text-sm text-cool-gray">Nenhuma configuração de IA cadastrada ainda.</p>
+  {% endfor %}
+</div>
+{% endblock %}
