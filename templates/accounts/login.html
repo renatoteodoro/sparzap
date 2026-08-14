@@ -1,0 +1,36 @@
+{% extends 'base.html' %}
+{% block title %}Entrar — Sparzap{% endblock %}
+{% block body %}
+{% include 'components/navbar_public.html' %}
+{% include 'components/messages.html' %}
+
+<div class="min-h-[calc(100vh-56px)] flex items-center justify-center px-4 py-12">
+  <div class="w-full max-w-sm bg-surface border border-silver rounded-card p-8">
+    <h1 class="text-2xl font-sans font-semibold mb-1">Entrar</h1>
+    <p class="text-sm text-cool-gray mb-6">Acesse o seu painel Sparzap.</p>
+
+    <form method="post" class="flex flex-col gap-4">
+      {% csrf_token %}
+      {% if form.non_field_errors %}
+        <p class="text-sm text-danger">{{ form.non_field_errors.0 }}</p>
+      {% endif %}
+      {% for field in form %}
+        <div>
+          <label class="block text-sm font-medium mb-1.5" for="{{ field.id_for_label }}">{{ field.label }}</label>
+          {{ field }}
+          {% if field.errors %}
+            <p class="text-xs text-danger mt-1">{{ field.errors.0 }}</p>
+          {% endif %}
+        </div>
+      {% endfor %}
+      <input type="hidden" name="next" value="{{ next }}">
+      <button type="submit" class="mt-2 w-full bg-dark-green text-white rounded-full py-2.5 text-sm font-semibold">Entrar</button>
+    </form>
+
+    <div class="flex items-center justify-between mt-6 text-sm">
+      <a href="{% url 'accounts:password_reset' %}" class="text-blue hover:underline">Esqueci a senha</a>
+      <a href="{% url 'accounts:signup' %}" class="text-blue hover:underline">Criar conta</a>
+    </div>
+  </div>
+</div>
+{% endblock %}

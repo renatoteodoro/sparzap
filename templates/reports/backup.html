@@ -1,0 +1,47 @@
+{% extends 'base_app.html' %}
+{% block title %}Backup e Restauração — Sparzap{% endblock %}
+{% block page_title %}Backup e Restauração{% endblock %}
+{% block app_content %}
+<div class="grid gap-6 lg:grid-cols-2">
+  <div class="bg-surface border border-silver rounded-card p-6">
+    <h3 class="font-sans font-medium mb-3">Exportar configuração</h3>
+    <form method="post" action="{% url 'reports:backup_export' %}" class="flex flex-col gap-3">
+      {% csrf_token %}
+      <div class="flex flex-col gap-1.5 text-sm">
+        {% for checkbox in export_form.secoes %}
+        <label class="flex items-center gap-2">{{ checkbox.tag }} {{ checkbox.choice_label }}</label>
+        {% endfor %}
+      </div>
+      <button type="submit" class="bg-dark-green text-white rounded-full py-2.5 text-sm font-semibold">Exportar JSON</button>
+    </form>
+  </div>
+
+  <div class="bg-surface border border-silver rounded-card p-6">
+    <h3 class="font-sans font-medium mb-3">Importar configuração</h3>
+    <form method="post" action="{% url 'reports:backup_import' %}" enctype="multipart/form-data" class="flex flex-col gap-3">
+      {% csrf_token %}
+      {% for field in import_form %}
+        <div>
+          <label class="block text-sm font-medium mb-1.5" for="{{ field.id_for_label }}">{{ field.label }}</label>
+          {{ field }}
+        </div>
+      {% endfor %}
+      <button type="submit" class="border border-dark-green text-dark-green rounded-full py-2.5 text-sm font-semibold">Importar</button>
+    </form>
+  </div>
+</div>
+
+<div class="bg-surface border border-silver rounded-card p-6 mt-6">
+  <h3 class="font-sans font-medium mb-3">Backups gerados recentemente</h3>
+  <ul class="text-sm space-y-1.5">
+    {% for b in backups %}
+    <li class="flex justify-between border-b border-silver/40 py-1.5">
+      <span>{{ b.get_tipo_display }} ({{ b.secoes }})</span>
+      <span class="text-cool-gray">{{ b.created_at }}</span>
+    </li>
+    {% empty %}
+    <li class="text-cool-gray">Nenhum backup gerado ainda.</li>
+    {% endfor %}
+  </ul>
+</div>
+{% endblock %}

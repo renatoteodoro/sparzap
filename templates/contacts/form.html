@@ -1,0 +1,21 @@
+{% extends 'base_app.html' %}
+{% block title %}{% if object %}Editar{% else %}Novo{% endif %} contato — Sparzap{% endblock %}
+{% block page_title %}{% if object %}Editar contato{% else %}Novo contato{% endif %}{% endblock %}
+{% block app_content %}
+<div class="max-w-md bg-surface border border-silver rounded-card p-6">
+  <form method="post" class="flex flex-col gap-4">
+    {% csrf_token %}
+    {% for field in form %}
+      <div class="{% if field.name == 'opt_out' %}flex items-center gap-2{% endif %}">
+        <label class="block text-sm font-medium mb-1.5" for="{{ field.id_for_label }}">{{ field.label }}</label>
+        {{ field }}
+        {% if field.errors %}<p class="text-xs text-danger mt-1">{{ field.errors.0 }}</p>{% endif %}
+      </div>
+    {% endfor %}
+    <div class="flex gap-2 mt-2">
+      <button type="submit" class="bg-dark-green text-white rounded-full px-5 py-2.5 text-sm font-semibold">Salvar</button>
+      <a href="{% url 'contacts:list' %}" class="border border-silver rounded-link px-5 py-2.5 text-sm">Cancelar</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

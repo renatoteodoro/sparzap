@@ -1,0 +1,31 @@
+{% extends 'base_app.html' %}
+{% block title %}Logs de gatilhos — Sparzap{% endblock %}
+{% block page_title %}Logs de gatilhos{% endblock %}
+{% block app_content %}
+<div class="bg-surface border border-silver rounded-card overflow-x-auto">
+  <table class="w-full text-sm">
+    <thead>
+      <tr class="text-xs font-mono uppercase text-cool-gray border-b border-silver">
+        <th class="text-left px-4 py-3">Gatilho</th>
+        <th class="text-left px-4 py-3">Contato</th>
+        <th class="text-left px-4 py-3">Mensagem</th>
+        <th class="text-left px-4 py-3">Ações</th>
+        <th class="text-left px-4 py-3">Quando</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for log in logs %}
+      <tr class="border-b border-silver/50">
+        <td class="px-4 py-2.5">{{ log.trigger.nome }}</td>
+        <td class="px-4 py-2.5">{{ log.contact }}</td>
+        <td class="px-4 py-2.5 text-cool-gray">{{ log.mensagem_recebida|truncatechars:60 }}</td>
+        <td class="px-4 py-2.5 font-mono text-xs">{{ log.acoes_executadas }}</td>
+        <td class="px-4 py-2.5 text-cool-gray">{{ log.created_at }}</td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="5" class="px-4 py-10 text-center text-cool-gray">Nenhum gatilho disparado ainda.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

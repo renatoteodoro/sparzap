@@ -1,0 +1,63 @@
+{% extends 'base_app.html' %}
+{% block title %}{{ script.nome }} — Sparzap{% endblock %}
+{% block page_title %}{{ script.nome }}{% endblock %}
+{% block topbar_extra %}
+<form method="post" action="{% url 'scripts:duplicate' script.pk %}">{% csrf_token %}<button type="submit" class="border border-silver rounded-link px-4 py-2 text-sm">Duplicar</button></form>
+<a href="{% url 'scripts:update' script.pk %}" class="border border-silver rounded-link px-4 py-2 text-sm">Editar dados</a>
+{% endblock %}
+
+{% block app_content %}
+<div class="grid gap-6 lg:grid-cols-3">
+  <div class="lg:col-span-2 flex flex-col gap-3">
+    <h3 class="font-sans font-medium">Passos (em ordem)</h3>
+    {% for step in script.steps.all %}
+    <div class="bg-surface border border-silver rounded-card p-4 flex items-start justify-between gap-4">
+      <div>
+        <p class="text-xs font-mono text-cool-gray mb-1">#{{ step.ordem }} — {{ step.get_tipo_display }}</p>
+        {% if step.message %}<p class="text-sm">Mensagem: <strong>{{ step.message.titulo }}</strong></p>{% endif %}
+        {% if step.delay_s %}<p class="text-sm">Delay: {{ step.delay_s }}s</p>{% endif %}
+        {% if step.tipo == 'aguardar_resposta' %}<p class="text-sm">Timeout: {{ step.timeout_h }}h</p>{% endif %}
+        {% if step.condicao_contem %}<p class="text-sm">Se contém "<em>{{ step.condicao_contem }}</em>" → passo #{{ step.proximo_passo.ordem|default:"—" }}</p>{% endif %}
+        {% if step.etapa_destino %}<p class="text-sm">Muda etapa para: <strong>{{ step.etapa_destino }}</strong></p>{% endif %}
+      </div>
+      <form method="post" action="{% url 'scripts:step_delete' script.pk step.pk %}">
+        {% csrf_token %}
+        <button type="submit" class="text-danger text-xs">remover</button>
+      </form>
+    </div>
+    {% empty %}
+    <p class="text-sm text-cool-gray">Nenhum passo ainda. Adicione o primeiro ao lado.</p>
+    {% endfor %}
+  </div>
+
+  <div class="flex flex-col gap-6">
+    <div class="bg-surface border border-silver rounded-card p-5">
+      <h3 class="font-sans font-medium mb-3">Adicionar passo</h3>
+      <form method="post" action="{% url 'scripts:step_create' script.pk %}" class="flex flex-col gap-3">
+        {% csrf_token %}
+        {% for field in step_form %}
+          <div>
+            <label class="block text-xs font-medium mb-1" for="{{ field.id_for_label }}">{{ field.label }}</label>
+            {{ field }}
+          </div>
+        {% endfor %}
+        <button type="submit" class="bg-dark-green text-white rounded-full py-2 text-sm font-semibold">Adicionar</button>
+      </form>
+    </div>
+
+    <div class="bg-surface border border-silver rounded-card p-5">
+      <h3 class="font-sans font-medium mb-3">Modo teste</h3>
+      <form method="post" action="{% url 'scripts:test_run' script.pk %}" class="flex flex-col gap-3">
+        {% csrf_token %}
+        {% for field in test_form %}
+          <div>
+            <label class="block text-xs font-medium mb-1" for="{{ field.id_for_label }}">{{ field.label }}</label>
+            {{ field }}
+          </div>
+        {% endfor %}
+        <button type="submit" class="border border-dark-green text-dark-green rounded-full py-2 text-sm font-semibold">Executar para 1 contato</button>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

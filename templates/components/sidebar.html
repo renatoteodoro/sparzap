@@ -1,0 +1,38 @@
+{% load sparzap_extras %}
+<aside class="w-60 shrink-0 h-screen sticky top-0 flex flex-col bg-forest text-white border-r border-teal-gray">
+  <div class="px-5 py-5 border-b border-teal-gray/60">
+    <a href="{% url 'dashboard' %}" class="font-sans font-semibold text-sm text-white">Sparzap<span class="text-green">⚡</span></a>
+  </div>
+
+  <nav class="flex-1 overflow-y-auto py-4 flex flex-col gap-1">
+    {% url 'dashboard' as url_dashboard %}
+    {% url 'instances:list' as url_instances %}
+    {% url 'contacts:list' as url_contacts %}
+    {% url 'library:list' as url_library %}
+    {% url 'scripts:list' as url_scripts %}
+    {% url 'campaigns:list' as url_campaigns %}
+    {% url 'triggers:list' as url_triggers %}
+    {% url 'crm:kanban' as url_crm %}
+    {% url 'antiblock:warmup' as url_warmup %}
+    {% url 'reports:index' as url_reports %}
+
+    {% sidebar_link url_dashboard '📊' 'Dashboard' %}
+    {% sidebar_link url_instances '📱' 'Instâncias' %}
+    {% sidebar_link url_contacts '👥' 'Contatos' %}
+    {% sidebar_link url_library '💬' 'Mensagens' %}
+    {% sidebar_link url_scripts '🧩' 'Scripts' %}
+    {% sidebar_link url_campaigns '🚀' 'Campanhas' %}
+    {% sidebar_link url_triggers '⚡' 'Gatilhos' %}
+    {% sidebar_link url_crm '📇' 'CRM' %}
+    {% sidebar_link url_warmup '🔥' 'Aquecimento' %}
+    {% sidebar_link url_reports '📈' 'Relatórios' %}
+  </nav>
+
+  <div class="px-5 py-4 border-t border-teal-gray/60 text-xs text-cool-gray">
+    <p class="truncate">{{ request.user.get_full_name }}</p>
+    <form method="post" action="{% url 'accounts:logout' %}">
+      {% csrf_token %}
+      <button type="submit" class="text-white/60 hover:text-white underline-offset-2 hover:underline">Sair</button>
+    </form>
+  </div>
+</aside>

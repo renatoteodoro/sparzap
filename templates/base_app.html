@@ -1,0 +1,22 @@
+{% extends 'base.html' %}
+{% block body %}
+<div class="flex">
+  {% include 'components/sidebar.html' %}
+
+  <div class="flex-1 min-w-0 flex flex-col">
+    <header class="sticky top-0 z-40 flex items-center justify-between gap-4 px-6 py-3 border-b border-silver bg-surface">
+      <h1 class="font-sans font-medium text-lg">{% block page_title %}{% endblock %}</h1>
+      <div class="flex items-center gap-4">
+        {% block topbar_extra %}{% endblock %}
+        <button type="button" data-theme-toggle aria-label="Alternar tema" class="text-cool-gray hover:text-ink text-sm">🌓</button>
+      </div>
+    </header>
+
+    {% include 'components/messages.html' %}
+
+    <main class="flex-1 px-6 py-6">
+      {% block app_content %}{% endblock %}
+    </main>
+  </div>
+</div>
+{% endblock %}

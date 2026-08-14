@@ -1,0 +1,75 @@
+# Produção — reaproveita o PostgreSQL e o Redis que já rodam no host junto
+# com a Evolution API (ver PRD.md secao 17.2/8.6). Este compose NÃO sobe
+# banco/fila próprios; ele só entra na rede Docker onde a Evolution/Postgres/
+# Redis já existem (ajuste EXTERNAL_NETWORK no .env para o nome real dessa
+# rede na sua VPS — normalmente algo como "evolution_default").
+#
+# Uso:
+#   docker compose -f docker-compose.prod.yml --env-file .env up -d --build
+
+services:
+  web:
+    build: .
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      DEBUG: "False"
+    volumes:
+      - media:/app/media
+    networks:
+      - default
+      - evolution
+    depends_on:
+      - worker
+
+  worker:
+    build: .
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      DEBUG: "False"
+      PYTHONUNBUFFERED: "1"
+    command: celery -A core worker --loglevel=info --concurrency=2
+    volumes:
+      - media:/app/media
+    networks:
+      - default
+      - evolution
+
+  beat:
+    build: .
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      DEBUG: "False"
+    command: celery -A core beat --loglevel=info --scheduler django_celery_beat.schedulers:DatabaseScheduler
+    networks:
+      - default
+      - evolution
+
+  nginx:
+    image: nginx:alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./deploy/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - media:/app/media:ro
+      - ./deploy/certs:/etc/nginx/certs:ro
+    depends_on:
+      - web
+    networks:
+      - default
+
+# /static/ é servido pelo WhiteNoise (via Gunicorn/web), não pelo Nginx —
+# evita duplicar o volume de staticfiles gerado no build da imagem
+# (CompressedManifestStaticFilesStorage). O Nginx só serve /media/ direto.
+volumes:
+  media:
+
+networks:
+  default:
+  evolution:
+    external: true
+    name: ${EVOLUTION_NETWORK_NAME:-evolution_default}

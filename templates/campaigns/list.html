@@ -1,0 +1,35 @@
+{% extends 'base_app.html' %}
+{% load sparzap_extras %}
+{% block title %}Campanhas — Sparzap{% endblock %}
+{% block page_title %}Campanhas{% endblock %}
+{% block topbar_extra %}
+<a href="{% url 'campaigns:create' %}" class="bg-dark-green text-white px-4 py-2 rounded-full text-sm font-semibold">+ Nova campanha</a>
+{% endblock %}
+{% block app_content %}
+<div class="bg-surface border border-silver rounded-card overflow-x-auto">
+  <table class="w-full text-sm">
+    <thead>
+      <tr class="text-xs font-mono uppercase text-cool-gray border-b border-silver">
+        <th class="text-left px-4 py-3">Campanha</th>
+        <th class="text-left px-4 py-3">Instância</th>
+        <th class="text-left px-4 py-3">Script</th>
+        <th class="text-left px-4 py-3">Status</th>
+        <th class="px-4 py-3"></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for campaign in campaigns %}
+      <tr class="border-b border-silver/50 hover:bg-silver/10">
+        <td class="px-4 py-2.5">{{ campaign.nome }}</td>
+        <td class="px-4 py-2.5">{{ campaign.instance.nome }}</td>
+        <td class="px-4 py-2.5">{{ campaign.script.nome }}</td>
+        <td class="px-4 py-2.5">{% status_badge campaign.status campaign.get_status_display %}</td>
+        <td class="px-4 py-2.5 text-right"><a href="{% url 'campaigns:detail' campaign.pk %}" class="text-blue hover:underline">abrir</a></td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="5" class="px-4 py-10 text-center text-cool-gray">Nenhuma campanha criada ainda.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

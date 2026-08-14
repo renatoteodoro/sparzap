@@ -1,0 +1,40 @@
+{% extends 'base_app.html' %}
+{% block title %}Leads — Sparzap{% endblock %}
+{% block page_title %}Leads{% endblock %}
+{% block topbar_extra %}
+<a href="{% url 'crm:kanban' %}" class="border border-silver rounded-link px-4 py-2 text-sm">Kanban</a>
+{% endblock %}
+{% block app_content %}
+<form method="get" class="flex gap-2 mb-4">
+  <select name="etapa" onchange="this.form.submit()" class="bg-surface text-ink border border-silver rounded-input px-3 py-2 text-sm">
+    <option value="">Todas as etapas</option>
+    {% for stage in stages %}
+    <option value="{{ stage.pk }}" {% if request.GET.etapa == stage.pk|stringformat:'s' %}selected{% endif %}>{{ stage.nome }}</option>
+    {% endfor %}
+  </select>
+</form>
+<div class="bg-surface border border-silver rounded-card overflow-x-auto">
+  <table class="w-full text-sm">
+    <thead>
+      <tr class="text-xs font-mono uppercase text-cool-gray border-b border-silver">
+        <th class="text-left px-4 py-3">Contato</th>
+        <th class="text-left px-4 py-3">Etapa</th>
+        <th class="text-left px-4 py-3">Origem</th>
+        <th class="text-left px-4 py-3">Desde</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for lead in leads %}
+      <tr class="border-b border-silver/50 hover:bg-silver/10">
+        <td class="px-4 py-2.5"><a href="{% url 'crm:detail' lead.pk %}" class="text-blue hover:underline">{{ lead.contact }}</a></td>
+        <td class="px-4 py-2.5">{{ lead.stage.nome }}</td>
+        <td class="px-4 py-2.5 text-cool-gray">{{ lead.origem|default:"—" }}</td>
+        <td class="px-4 py-2.5 text-cool-gray">{{ lead.entrou_na_etapa_em }}</td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="4" class="px-4 py-10 text-center text-cool-gray">Nenhum lead ainda.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

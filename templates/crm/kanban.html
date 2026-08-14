@@ -1,0 +1,50 @@
+{% extends 'base_app.html' %}
+{% block title %}CRM — Sparzap{% endblock %}
+{% block page_title %}Funil de leads — {{ pipeline.nome }}{% endblock %}
+{% block topbar_extra %}
+<a href="{% url 'crm:list' %}" class="border border-silver rounded-link px-4 py-2 text-sm">Lista</a>
+<a href="{% url 'crm:export' %}" class="border border-silver rounded-link px-4 py-2 text-sm">Exportar CSV</a>
+{% endblock %}
+
+{% block app_content %}
+<div class="flex gap-4 overflow-x-auto pb-4">
+  {% for stage in stages %}
+  <div class="min-w-[260px] w-[260px] shrink-0 bg-surface border border-silver rounded-card p-3"
+       data-stage-id="{{ stage.pk }}" ondrop="onDrop(event)" ondragover="event.preventDefault()">
+    <h3 class="text-xs font-mono uppercase text-cool-gray mb-3 flex items-center justify-between">
+      {{ stage.nome }} <span class="text-cool-gray">{{ stage.leads.count }}</span>
+    </h3>
+    <div class="flex flex-col gap-2">
+      {% for lead in stage.leads.all %}
+      <a href="{% url 'crm:detail' lead.pk %}" draggable="true" ondragstart="onDragStart(event, {{ lead.pk }})"
+         class="block bg-forest text-white rounded-link p-3 text-sm cursor-move">
+        <p class="font-medium">{{ lead.contact.nome|default:lead.contact.numero_e164 }}</p>
+        <p class="text-xs text-white/50 font-mono">{{ lead.contact.numero_e164 }}</p>
+      </a>
+      {% endfor %}
+    </div>
+  </div>
+  {% endfor %}
+</div>
+
+<script>
+function getCookie(name) {
+  const v = document.cookie.match('(^|;)\\s*' + name + '\\s*=\\s*([^;]+)');
+  return v ? v.pop() : '';
+}
+function onDragStart(ev, leadId) {
+  ev.dataTransfer.setData('lead_id', leadId);
+}
+async function onDrop(ev) {
+  ev.preventDefault();
+  const leadId = ev.dataTransfer.getData('lead_id');
+  const stageId = ev.currentTarget.dataset.stageId;
+  await fetch(`/crm/leads/${leadId}/mover/`, {
+    method: 'POST',
+    headers: {'Content-Type': 'application/x-www-form-urlencoded', 'X-CSRFToken': getCookie('csrftoken')},
+    body: 'stage_id=' + stageId,
+  });
+  location.reload();
+}
+</script>
+{% endblock %}

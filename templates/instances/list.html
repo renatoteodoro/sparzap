@@ -1,0 +1,33 @@
+{% extends 'base_app.html' %}
+{% load sparzap_extras %}
+{% block title %}Instâncias — Sparzap{% endblock %}
+{% block page_title %}Instâncias{% endblock %}
+{% block topbar_extra %}
+<a href="{% url 'instances:create' %}" class="bg-dark-green text-white px-4 py-2 rounded-full text-sm font-semibold">+ Nova instância</a>
+{% endblock %}
+
+{% block app_content %}
+{% if instances %}
+<div class="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+  {% for instance in instances %}
+  <div class="bg-surface border border-silver rounded-card p-5">
+    <div class="flex items-start justify-between mb-3">
+      <h3 class="font-sans font-medium text-lg">{{ instance.nome }}</h3>
+      {% status_badge instance.status instance.get_status_display %}
+    </div>
+    <p class="text-xs font-mono text-cool-gray mb-1">{{ instance.evolution_instance_name }}</p>
+    <p class="text-sm text-cool-gray mb-4">Limite diário: {{ instance.limite_diario }} envios</p>
+    <div class="flex gap-2">
+      <a href="{% url 'instances:connect' instance.pk %}" class="flex-1 text-center bg-dark-green text-white rounded-full py-2 text-sm font-semibold">Conectar</a>
+      <a href="{% url 'instances:update' instance.pk %}" class="border border-silver rounded-link px-3 py-2 text-sm">Editar</a>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% else %}
+<div class="bg-surface border border-silver rounded-card p-10 text-center">
+  <p class="text-sm text-cool-gray mb-4">Nenhuma instância cadastrada ainda.</p>
+  <a href="{% url 'instances:create' %}" class="inline-block bg-dark-green text-white px-5 py-2.5 rounded-full text-sm font-semibold">Conectar minha primeira instância</a>
+</div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,21 @@
+{% extends 'base_app.html' %}
+{% block title %}Importar contatos — Sparzap{% endblock %}
+{% block page_title %}Importar contatos (CSV){% endblock %}
+{% block app_content %}
+<div class="max-w-md bg-surface border border-silver rounded-card p-6">
+  <p class="text-sm text-cool-gray mb-4">
+    Colunas esperadas: <code class="font-mono">numero, nome</code> (com ou sem cabeçalho).
+  </p>
+  <form method="post" enctype="multipart/form-data" class="flex flex-col gap-4">
+    {% csrf_token %}
+    {% for field in form %}
+      <div>
+        <label class="block text-sm font-medium mb-1.5" for="{{ field.id_for_label }}">{{ field.label }}</label>
+        {{ field }}
+        {% if field.errors %}<p class="text-xs text-danger mt-1">{{ field.errors.0 }}</p>{% endif %}
+      </div>
+    {% endfor %}
+    <button type="submit" class="bg-dark-green text-white rounded-full py-2.5 text-sm font-semibold">Importar</button>
+  </form>
+</div>
+{% endblock %}

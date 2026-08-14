@@ -1,0 +1,19 @@
+{% extends 'base_app.html' %}
+{% block title %}Scripts — Sparzap{% endblock %}
+{% block page_title %}Scripts{% endblock %}
+{% block topbar_extra %}
+<a href="{% url 'scripts:create' %}" class="bg-dark-green text-white px-4 py-2 rounded-full text-sm font-semibold">+ Novo script</a>
+{% endblock %}
+{% block app_content %}
+<div class="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+  {% for script in scripts %}
+  <a href="{% url 'scripts:detail' script.pk %}" class="block bg-surface border border-silver rounded-card p-5 hover:border-dark-green transition-colors">
+    <h3 class="font-sans font-medium mb-1">{{ script.nome }}</h3>
+    <p class="text-sm text-cool-gray mb-2">{{ script.descricao|default:"Sem descrição"|truncatewords:15 }}</p>
+    <p class="text-xs font-mono text-cool-gray">{{ script.steps.count }} passo(s)</p>
+  </a>
+  {% empty %}
+  <p class="text-sm text-cool-gray">Nenhum script cadastrado ainda.</p>
+  {% endfor %}
+</div>
+{% endblock %}

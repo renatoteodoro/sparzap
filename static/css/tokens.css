@@ -1,0 +1,61 @@
+/*
+ * Tokens do design system (fonte: mongodb/design-system-light.html e
+ * mongodb/design-system-dark.html). Ver PRD.md secao 9.
+ *
+ * --white representa o FUNDO da pagina e --black o TEXTO principal em
+ * ambos os temas (nomes herdados da fonte original, nao tomar ao pe da letra).
+ */
+
+:root,
+:root.light {
+  --forest: #001e2b;
+  --green: #00ed64;
+  --dark-green: #00684a;
+  --blue: #006cfa;
+  --hover-blue: #3860be;
+  --teal: #1c2d38;
+  --teal-gray: #3d4f58;
+  --cool-gray: #5c6c75;
+  --silver: #b8c4c2;
+  --white: #ffffff;
+  --black: #000000;
+
+  /* Extensoes do Sparzap (nao definidas na fonte MongoDB) */
+  --warning: #e5a000;
+  --danger: #e53e3e;
+
+  --shadow-forest: rgba(0, 30, 43, 0.12) 0px 26px 44px, rgba(0, 0, 0, 0.13) 0px 7px 13px;
+  --shadow-subtle: rgba(0, 0, 0, 0.1) 0px 2px 4px;
+  --shadow-standard: rgba(0, 0, 0, 0.15) 0px 3px 20px;
+
+  --font-serif: 'DM Serif Display', Georgia, serif;
+  --font-sans: 'Inter', system-ui, sans-serif;
+  --font-mono: 'Source Code Pro', ui-monospace, monospace;
+}
+
+:root.dark {
+  --forest: #001e2b;
+  --green: #00ed64;
+  --dark-green: #00684a;
+  --blue: #006cfa;
+  --hover-blue: #3860be;
+  --teal: #1c2d38;
+  --teal-gray: #3d4f58;
+  --cool-gray: #8a9ba2;
+  --silver: #3d4f58;
+  --white: #001e2b;
+  --black: #e8edeb;
+
+  --warning: #e5a000;
+  --danger: #e53e3e;
+
+  --shadow-forest: rgba(0, 30, 43, 0.4) 0px 26px 44px, rgba(0, 0, 0, 0.35) 0px 7px 13px;
+  --shadow-subtle: rgba(0, 0, 0, 0.3) 0px 2px 4px;
+  --shadow-standard: rgba(0, 0, 0, 0.35) 0px 3px 20px;
+}
+
+body {
+  background: var(--white);
+  color: var(--black);
+  font-family: var(--font-sans);
+}

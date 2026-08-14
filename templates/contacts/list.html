@@ -1,0 +1,54 @@
+{% extends 'base_app.html' %}
+{% block title %}Contatos — Sparzap{% endblock %}
+{% block page_title %}Contatos{% endblock %}
+{% block topbar_extra %}
+<a href="{% url 'contacts:groups' %}" class="border border-silver rounded-link px-4 py-2 text-sm">Grupos</a>
+<a href="{% url 'contacts:import' %}" class="border border-silver rounded-link px-4 py-2 text-sm">Importar CSV</a>
+<a href="{% url 'contacts:export' %}" class="border border-silver rounded-link px-4 py-2 text-sm">Exportar</a>
+<a href="{% url 'contacts:create' %}" class="bg-dark-green text-white px-4 py-2 rounded-full text-sm font-semibold">+ Novo contato</a>
+{% endblock %}
+
+{% block app_content %}
+<form method="get" class="flex gap-2 mb-4">
+  <input type="text" name="q" value="{{ request.GET.q }}" placeholder="Buscar por número ou nome" class="w-full max-w-sm bg-surface text-ink border border-silver rounded-input px-3 py-2 text-sm">
+  <button type="submit" class="border border-silver rounded-link px-4 py-2 text-sm">Buscar</button>
+  <form method="post" action="{% url 'contacts:dedupe' %}">{% csrf_token %}<button type="submit" class="border border-silver rounded-link px-4 py-2 text-sm">Deduplicar</button></form>
+</form>
+
+<div class="bg-surface border border-silver rounded-card overflow-x-auto">
+  <table class="w-full text-sm">
+    <thead>
+      <tr class="text-xs font-mono uppercase text-cool-gray border-b border-silver">
+        <th class="text-left px-4 py-3">Número</th>
+        <th class="text-left px-4 py-3">Nome</th>
+        <th class="text-left px-4 py-3">Etiquetas</th>
+        <th class="text-left px-4 py-3">Opt-out</th>
+        <th class="px-4 py-3"></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for contact in contacts %}
+      <tr class="border-b border-silver/50 hover:bg-silver/10">
+        <td class="px-4 py-2.5 font-mono">{{ contact.numero_e164 }}</td>
+        <td class="px-4 py-2.5">{{ contact.nome|default:"—" }}</td>
+        <td class="px-4 py-2.5">
+          {% for tag in contact.tags.all %}<span class="text-xs bg-silver/20 rounded-full px-2 py-0.5 mr-1">{{ tag.nome }}</span>{% endfor %}
+        </td>
+        <td class="px-4 py-2.5">{% if contact.opt_out %}<span class="text-danger">sim</span>{% else %}—{% endif %}</td>
+        <td class="px-4 py-2.5 text-right"><a href="{% url 'contacts:update' contact.pk %}" class="text-blue hover:underline">editar</a></td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="5" class="px-4 py-10 text-center text-cool-gray">Nenhum contato encontrado.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+{% if is_paginated %}
+<div class="flex gap-2 mt-4 text-sm">
+  {% if page_obj.has_previous %}<a href="?page={{ page_obj.previous_page_number }}" class="text-blue hover:underline">Anterior</a>{% endif %}
+  <span class="text-cool-gray">Página {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}</span>
+  {% if page_obj.has_next %}<a href="?page={{ page_obj.next_page_number }}" class="text-blue hover:underline">Próxima</a>{% endif %}
+</div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,67 @@
+{% extends 'base_app.html' %}
+{% load sparzap_extras %}
+{% block title %}{{ campaign.nome }} — Sparzap{% endblock %}
+{% block page_title %}{{ campaign.nome }}{% endblock %}
+{% block topbar_extra %}
+{% status_badge campaign.status campaign.get_status_display %}
+{% if campaign.status == 'rascunho' or campaign.status == 'pausada' %}
+<form method="post" action="{% url 'campaigns:start' campaign.pk %}">{% csrf_token %}<button type="submit" class="bg-dark-green text-white px-4 py-2 rounded-full text-sm font-semibold">{% if campaign.status == 'pausada' %}Retomar{% else %}Iniciar disparo{% endif %}</button></form>
+{% elif campaign.status == 'em_andamento' %}
+<form method="post" action="{% url 'campaigns:pause' campaign.pk %}">{% csrf_token %}<button type="submit" class="border border-silver rounded-link px-4 py-2 text-sm">Pausar</button></form>
+{% endif %}
+{% if campaign.status != 'concluida' and campaign.status != 'cancelada' %}
+<form method="post" action="{% url 'campaigns:cancel' campaign.pk %}">{% csrf_token %}<button type="submit" class="text-danger text-sm px-2">Cancelar</button></form>
+{% endif %}
+<a href="{% url 'campaigns:report' campaign.pk %}" class="border border-silver rounded-link px-4 py-2 text-sm">Exportar relatório</a>
+{% endblock %}
+
+{% block app_content %}
+<div class="grid gap-4 md:grid-cols-2 xl:grid-cols-5 mb-6">
+  <div class="bg-surface border border-silver rounded-card p-4"><p class="text-xs text-cool-gray mb-1">Público previsto</p><p class="text-2xl font-semibold">{{ audiencia_prevista }}</p></div>
+  <div class="bg-surface border border-silver rounded-card p-4"><p class="text-xs text-cool-gray mb-1">Pendentes</p><p class="text-2xl font-semibold" data-live="pendente">{{ contagem.pendente }}</p></div>
+  <div class="bg-surface border border-silver rounded-card p-4"><p class="text-xs text-cool-gray mb-1">Enviadas</p><p class="text-2xl font-semibold text-green" data-live="enviada">{{ contagem.enviada }}</p></div>
+  <div class="bg-surface border border-silver rounded-card p-4"><p class="text-xs text-cool-gray mb-1">Respondidas</p><p class="text-2xl font-semibold text-blue" data-live="respondida">{{ contagem.respondida }}</p></div>
+  <div class="bg-surface border border-silver rounded-card p-4"><p class="text-xs text-cool-gray mb-1">Falhas</p><p class="text-2xl font-semibold text-danger" data-live="falha">{{ contagem.falha }}</p></div>
+</div>
+
+{% if campaign.status == 'em_andamento' %}
+<script>
+(function () {
+  var es = new EventSource("{% url 'campaigns:progress_stream' campaign.pk %}");
+  es.onmessage = function (event) {
+    var dados = JSON.parse(event.data);
+    document.querySelectorAll('[data-live]').forEach(function (el) {
+      var chave = el.getAttribute('data-live');
+      if (dados[chave] !== undefined) el.textContent = dados[chave];
+    });
+    if (dados.status !== 'em_andamento') { es.close(); }
+  };
+  // sem fechar no onerror: o EventSource reconecta sozinho por padrão em
+  // quedas de conexao transitorias (comportamento nativo do navegador)
+})();
+</script>
+{% endif %}
+
+<div class="bg-surface border border-silver rounded-card overflow-x-auto">
+  <table class="w-full text-sm">
+    <thead>
+      <tr class="text-xs font-mono uppercase text-cool-gray border-b border-silver">
+        <th class="text-left px-4 py-3">Contato</th>
+        <th class="text-left px-4 py-3">Status</th>
+        <th class="text-left px-4 py-3">Enviado em</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for cc in campaign_contacts %}
+      <tr class="border-b border-silver/50">
+        <td class="px-4 py-2.5">{{ cc.contact }}</td>
+        <td class="px-4 py-2.5">{% status_badge cc.status cc.get_status_display %}</td>
+        <td class="px-4 py-2.5 text-cool-gray">{{ cc.enviado_em|default:"—" }}</td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="3" class="px-4 py-10 text-center text-cool-gray">Público ainda não materializado — inicie o disparo.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

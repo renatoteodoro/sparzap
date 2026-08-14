@@ -1,0 +1,66 @@
+{% extends 'base_app.html' %}
+{% block title %}Gatilhos — Sparzap{% endblock %}
+{% block page_title %}Gatilhos{% endblock %}
+{% block topbar_extra %}
+<a href="{% url 'triggers:scheduled_list' %}" class="border border-silver rounded-link px-4 py-2 text-sm">Follow-ups agendados</a>
+<a href="{% url 'triggers:logs' %}" class="border border-silver rounded-link px-4 py-2 text-sm">Ver logs</a>
+<a href="{% url 'triggers:create' %}" class="bg-dark-green text-white px-4 py-2 rounded-full text-sm font-semibold">+ Novo gatilho</a>
+{% endblock %}
+{% block app_content %}
+<div class="grid gap-6 lg:grid-cols-3">
+  <div class="lg:col-span-2 bg-surface border border-silver rounded-card overflow-x-auto">
+    <table class="w-full text-sm">
+      <thead>
+        <tr class="text-xs font-mono uppercase text-cool-gray border-b border-silver">
+          <th class="text-left px-4 py-3">Nome</th>
+          <th class="text-left px-4 py-3">Palavras</th>
+          <th class="text-left px-4 py-3">Modo</th>
+          <th class="text-left px-4 py-3">Ativo</th>
+          <th class="px-4 py-3"></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for trigger in triggers %}
+        <tr class="border-b border-silver/50">
+          <td class="px-4 py-2.5">{{ trigger.nome }}</td>
+          <td class="px-4 py-2.5 font-mono text-xs">{{ trigger.palavras_chave }}</td>
+          <td class="px-4 py-2.5">{{ trigger.get_modo_display }}</td>
+          <td class="px-4 py-2.5">{% if trigger.ativo %}<span class="text-green">sim</span>{% else %}<span class="text-cool-gray">não</span>{% endif %}</td>
+          <td class="px-4 py-2.5 text-right"><a href="{% url 'triggers:update' trigger.pk %}" class="text-blue hover:underline">editar</a></td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="5" class="px-4 py-10 text-center text-cool-gray">Nenhum gatilho cadastrado.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <div class="bg-surface border border-silver rounded-card p-5">
+    <h3 class="font-sans font-medium mb-3">Testar gatilhos</h3>
+    <p class="text-xs text-cool-gray mb-3">Simula uma mensagem recebida e mostra quais gatilhos casariam (sem enviar nada).</p>
+    <textarea id="test-texto" rows="3" placeholder="Ex.: eu quero o link" class="w-full bg-surface text-ink border border-silver rounded-input px-3 py-2 text-sm mb-2"></textarea>
+    <button type="button" onclick="testarGatilhos()" class="border border-dark-green text-dark-green rounded-full py-2 px-4 text-sm font-semibold">Simular</button>
+    <div id="test-resultado" class="mt-3 text-sm"></div>
+  </div>
+</div>
+
+<script>
+function getCookie(name) {
+  const v = document.cookie.match('(^|;)\\s*' + name + '\\s*=\\s*([^;]+)');
+  return v ? v.pop() : '';
+}
+async function testarGatilhos() {
+  const texto = document.getElementById('test-texto').value;
+  const resp = await fetch("{% url 'triggers:test' %}", {
+    method: 'POST',
+    headers: {'Content-Type': 'application/x-www-form-urlencoded', 'X-CSRFToken': getCookie('csrftoken')},
+    body: 'texto=' + encodeURIComponent(texto),
+  });
+  const data = await resp.json();
+  const el = document.getElementById('test-resultado');
+  el.innerHTML = (data.resultados || []).map(r =>
+    `<div class="${r.casaria ? 'text-green' : 'text-cool-gray'}">${r.casaria ? '✓' : '✗'} ${r.trigger}</div>`
+  ).join('') || '<p class="text-cool-gray">Nenhum gatilho ativo.</p>';
+}
+</script>
+{% endblock %}

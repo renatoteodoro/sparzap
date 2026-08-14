@@ -1,0 +1,80 @@
+{% extends 'base.html' %}
+{% block title %}Sparzap — Automação de vendas no WhatsApp{% endblock %}
+
+{% block body %}
+{% include 'components/navbar_public.html' %}
+{% include 'components/messages.html' %}
+
+<section class="px-8 py-20 bg-forest text-center text-white">
+  <h1 class="font-serif text-5xl md:text-7xl font-normal leading-[1.1] mb-4">
+    Divulgue no WhatsApp<br>sem <span class="text-green">arriscar o número</span>
+  </h1>
+  <p class="text-lg font-light text-white/70 max-w-[550px] mx-auto mb-8">
+    Disparo em massa, scripts de 2 passos e protocolo anti-banimento — rodando
+    24/7 em servidor próprio, sem depender de browser aberto.
+  </p>
+  <div class="flex gap-3 justify-center flex-wrap">
+    <a href="{% url 'accounts:signup' %}" class="inline-block bg-dark-green text-white px-6 py-2.5 rounded-full text-sm font-semibold">Começar agora</a>
+    <a href="#recursos" class="inline-block bg-transparent text-white border border-teal-gray px-6 py-2.5 rounded-full text-sm font-medium">Ver recursos</a>
+  </div>
+</section>
+
+<section id="recursos" class="max-w-[1100px] mx-auto px-8 py-16">
+  <div class="font-mono text-xs uppercase tracking-[2px] text-dark-green mb-2">01 / Recursos</div>
+  <h2 class="text-3xl md:text-4xl font-sans font-medium mb-8">O que o Sparzap automatiza</h2>
+  <div class="grid gap-4 md:grid-cols-3">
+    <div class="bg-surface border border-silver rounded-card p-6">
+      <div class="font-mono text-xs uppercase tracking-[2px] text-dark-green border-b-2 border-green inline-block pb-0.5 mb-3">Disparo</div>
+      <h3 class="text-2xl font-sans font-medium mb-2">Scripts de 2 passos</h3>
+      <p class="text-sm text-cool-gray">Msg 1 induz resposta, msg 2 entrega o link — o fluxo que faz o grupo de ofertas crescer sozinho.</p>
+    </div>
+    <div class="bg-surface border border-silver rounded-card p-6">
+      <div class="font-mono text-xs uppercase tracking-[2px] text-dark-green border-b-2 border-green inline-block pb-0.5 mb-3">Gatilhos</div>
+      <h3 class="text-2xl font-sans font-medium mb-2">Resposta automática</h3>
+      <p class="text-sm text-cool-gray">Palavra-chave dispara resposta, muda etapa e etiqueta o lead — sem operador online.</p>
+    </div>
+    <div class="bg-surface border border-silver rounded-card p-6">
+      <div class="font-mono text-xs uppercase tracking-[2px] text-dark-green border-b-2 border-green inline-block pb-0.5 mb-3">CRM</div>
+      <h3 class="text-2xl font-sans font-medium mb-2">Funil kanban</h3>
+      <p class="text-sm text-cool-gray">Acompanhe cada lead do "Novo" ao "Vendido" com taxa de conversão por etapa.</p>
+    </div>
+  </div>
+</section>
+
+<div id="antiban" class="bg-forest text-white">
+  <div class="max-w-[1100px] mx-auto px-8 py-16">
+    <div class="font-mono text-xs uppercase tracking-[2px] text-green mb-2">02 / Proteção</div>
+    <h2 class="text-3xl md:text-4xl font-sans font-medium mb-8">Anti-banimento de verdade</h2>
+    <div class="grid gap-4 md:grid-cols-2">
+      <div class="rounded-card p-6" style="background:var(--teal); border:1px solid var(--teal-gray);">
+        <h3 class="text-xl font-sans font-medium mb-2">Ritmo controlado</h3>
+        <p class="text-sm text-white/60">Delay randômico, limite diário por número e pausa noturna aplicados em 100% dos envios.</p>
+      </div>
+      <div class="rounded-card p-6" style="background:var(--teal); border:1px solid var(--teal-gray);">
+        <h3 class="text-xl font-sans font-medium mb-2">Aquecimento gradual</h3>
+        <p class="text-sm text-white/60">Chip novo esquenta por 14 dias antes de liberar disparos grandes.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<section id="diferenciais" class="max-w-[1100px] mx-auto px-8 py-16">
+  <div class="font-mono text-xs uppercase tracking-[2px] text-dark-green mb-2">03 / Diferenciais</div>
+  <h2 class="text-3xl md:text-4xl font-sans font-medium mb-8">Por que não uma extensão de Chrome</h2>
+  <div class="grid gap-4 md:grid-cols-2">
+    <div class="bg-surface border border-silver rounded-card p-6">
+      <h3 class="text-xl font-sans font-medium mb-2">Servidor próprio 24/7</h3>
+      <p class="text-sm text-cool-gray">Roda sem navegador aberto — a Evolution API mantém a sessão do WhatsApp direto no servidor.</p>
+    </div>
+    <div class="bg-surface border border-silver rounded-card p-6">
+      <h3 class="text-xl font-sans font-medium mb-2">Multi-número nativo</h3>
+      <p class="text-sm text-cool-gray">Opere quantos chips forem necessários a partir de uma única tela.</p>
+    </div>
+  </div>
+  <div class="text-center mt-10">
+    <a href="{% url 'accounts:signup' %}" class="inline-block bg-dark-green text-white px-6 py-2.5 rounded-full text-sm font-semibold">Criar minha conta</a>
+  </div>
+</section>
+
+{% include 'components/footer.html' %}
+{% endblock %}

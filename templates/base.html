@@ -1,0 +1,35 @@
+{% load static %}<!DOCTYPE html>
+<html lang="pt-br" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}Sparzap{% endblock %}</title>
+
+  <!-- Anti-flash: aplica o tema salvo ANTES do primeiro paint -->
+  <script>
+    (function () {
+      var saved = localStorage.getItem('sparzap-theme');
+      var theme = saved || 'dark';
+      document.documentElement.classList.remove('light', 'dark');
+      document.documentElement.classList.add(theme);
+      document.documentElement.setAttribute('data-theme', theme);
+    })();
+  </script>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Inter:wght@300;400;500;600&family=Source+Code+Pro:wght@400;500;600&display=swap" rel="stylesheet">
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="{% static 'js/tailwind-config.js' %}"></script>
+  <link rel="stylesheet" href="{% static 'css/tokens.css' %}">
+
+  {% block extra_head %}{% endblock %}
+</head>
+<body class="font-sans font-light bg-surface text-ink min-h-screen">
+  {% block body %}{% endblock %}
+
+  <script src="{% static 'js/theme-toggle.js' %}"></script>
+  {% block extra_body %}{% endblock %}
+</body>
+</html>

@@ -1,0 +1,33 @@
+{% extends 'base_app.html' %}
+{% block title %}Aquecimento — Sparzap{% endblock %}
+{% block page_title %}Aquecimento de números{% endblock %}
+{% block app_content %}
+<div class="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+  {% for linha in linhas %}
+  <div class="bg-surface border border-silver rounded-card p-5">
+    <h3 class="font-sans font-medium mb-2">{{ linha.instance.nome }}</h3>
+    {% if linha.plano %}
+      <p class="text-xs text-cool-gray mb-1">Dia {{ linha.plano.dia_atual }} de {{ linha.plano.dias_total }}</p>
+      <div class="w-full h-2 bg-silver/30 rounded-full overflow-hidden mb-3">
+        <div class="h-2 bg-green" style="width: {% widthratio linha.plano.dia_atual linha.plano.dias_total 100 %}%"></div>
+      </div>
+      <p class="text-xs text-cool-gray mb-3">Limite diário atual: {{ linha.instance.limite_diario }}</p>
+      {% if linha.plano.status == 'em_andamento' %}
+      <form method="post" action="{% url 'antiblock:warmup_pause' linha.plano.pk %}">{% csrf_token %}<button type="submit" class="w-full border border-silver rounded-link py-2 text-sm">Pausar</button></form>
+      {% else %}
+      <form method="post" action="{% url 'antiblock:warmup_resume' linha.plano.pk %}">{% csrf_token %}<button type="submit" class="w-full bg-dark-green text-white rounded-full py-2 text-sm font-semibold">Retomar</button></form>
+      {% endif %}
+    {% else %}
+      <p class="text-sm text-cool-gray mb-3">Sem aquecimento ativo. Limite atual: {{ linha.instance.limite_diario }}.</p>
+      <form method="post" action="{% url 'antiblock:warmup_start' linha.instance.pk %}">
+        {% csrf_token %}
+        <input type="hidden" name="dias_total" value="14">
+        <button type="submit" class="w-full bg-dark-green text-white rounded-full py-2 text-sm font-semibold">Iniciar aquecimento (14 dias)</button>
+      </form>
+    {% endif %}
+  </div>
+  {% empty %}
+  <p class="text-sm text-cool-gray">Nenhuma instância cadastrada ainda.</p>
+  {% endfor %}
+</div>
+{% endblock %}

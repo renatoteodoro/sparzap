@@ -1,0 +1,70 @@
+{% extends 'base_app.html' %}
+{% block title %}Dashboard — Sparzap{% endblock %}
+{% block page_title %}Dashboard{% endblock %}
+
+{% block app_content %}
+{% if alertas %}
+<div class="flex flex-col gap-2 mb-6">
+  {% for alerta in alertas %}
+  <div class="flex items-center gap-2 rounded-link border border-warning bg-surface text-warning px-4 py-2.5 text-sm">
+    <span>⚠️</span> {{ alerta }}
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+
+<div class="grid gap-4 md:grid-cols-2 xl:grid-cols-4 mb-8">
+  <div class="bg-surface border border-silver rounded-card p-5">
+    <p class="text-xs font-mono uppercase tracking-wider text-cool-gray mb-2">Instâncias conectadas</p>
+    <p class="text-3xl font-sans font-semibold tabular-nums">{{ instancias_conectadas }}<span class="text-base text-cool-gray">/{{ instancias_total }}</span></p>
+  </div>
+  <div class="bg-surface border border-silver rounded-card p-5">
+    <p class="text-xs font-mono uppercase tracking-wider text-cool-gray mb-2">Envios hoje</p>
+    <p class="text-3xl font-sans font-semibold tabular-nums">{{ envios_hoje }}</p>
+  </div>
+  <div class="bg-surface border border-silver rounded-card p-5">
+    <p class="text-xs font-mono uppercase tracking-wider text-cool-gray mb-2">Taxa de resposta</p>
+    <p class="text-3xl font-sans font-semibold tabular-nums">{% if taxa_resposta != None %}{{ taxa_resposta }}%{% else %}—{% endif %}</p>
+  </div>
+  <div class="bg-surface border border-silver rounded-card p-5">
+    <p class="text-xs font-mono uppercase tracking-wider text-cool-gray mb-2">Leads na etapa "Novo"</p>
+    <p class="text-3xl font-sans font-semibold tabular-nums">{{ leads_novo }}</p>
+  </div>
+</div>
+
+<div class="bg-surface border border-silver rounded-card p-6 mb-8">
+  <h3 class="font-sans font-medium mb-4">Envios nos últimos 7 dias</h3>
+  <canvas id="grafico-envios" height="80"></canvas>
+</div>
+
+{% if instancias_total == 0 %}
+<div class="bg-surface border border-silver rounded-card p-6 text-center">
+  <p class="text-sm text-cool-gray">
+    Bem-vindo(a), {{ request.user.get_full_name }}. Conecte a sua primeira instância para começar a disparar campanhas.
+  </p>
+  <a href="{% url 'instances:list' %}" class="inline-block mt-4 bg-dark-green text-white px-5 py-2.5 rounded-full text-sm font-semibold">
+    Conectar instância
+  </a>
+</div>
+{% endif %}
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+<script>
+new Chart(document.getElementById('grafico-envios'), {
+  type: 'bar',
+  data: {
+    labels: {{ grafico_labels|safe }},
+    datasets: [{
+      label: 'Envios',
+      data: {{ grafico_valores|safe }},
+      backgroundColor: '#00ed64',
+      borderRadius: 4,
+    }],
+  },
+  options: {
+    plugins: { legend: { display: false } },
+    scales: { y: { beginAtZero: true, ticks: { precision: 0 } } },
+  },
+});
+</script>
+{% endblock %}

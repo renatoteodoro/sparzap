@@ -1,0 +1,40 @@
+{% extends 'base_app.html' %}
+{% block title %}Follow-ups agendados — Sparzap{% endblock %}
+{% block page_title %}Follow-ups agendados{% endblock %}
+{% block app_content %}
+<div class="bg-surface border border-silver rounded-card overflow-x-auto">
+  <table class="w-full text-sm">
+    <thead>
+      <tr class="text-xs font-mono uppercase text-cool-gray border-b border-silver">
+        <th class="text-left px-4 py-3">Contato</th>
+        <th class="text-left px-4 py-3">Mensagem</th>
+        <th class="text-left px-4 py-3">Data/hora</th>
+        <th class="px-4 py-3"></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for agendada in agendadas %}
+      <tr class="border-b border-silver/50">
+        <td class="px-4 py-2.5">{{ agendada.contact }}</td>
+        <td class="px-4 py-2.5">{{ agendada.message.titulo }}</td>
+        <td class="px-4 py-2.5 text-cool-gray">{{ agendada.data_hora }}</td>
+        <td class="px-4 py-2.5 text-right">
+          <div class="flex items-center justify-end gap-2">
+            <form method="post" action="{% url 'triggers:scheduled_reschedule' agendada.pk %}" class="flex items-center gap-1">
+              {% csrf_token %}
+              <input type="datetime-local" name="nova_data_hora" class="bg-surface text-ink border border-silver rounded-input px-2 py-1 text-xs">
+              <button type="submit" class="text-blue text-xs">reagendar</button>
+            </form>
+            <form method="post" action="{% url 'triggers:scheduled_cancel' agendada.pk %}">
+              {% csrf_token %}<button type="submit" class="text-danger text-xs">cancelar</button>
+            </form>
+          </div>
+        </td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="4" class="px-4 py-10 text-center text-cool-gray">Nenhum follow-up agendado.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

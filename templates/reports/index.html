@@ -1,0 +1,61 @@
+{% extends 'base_app.html' %}
+{% block title %}Relatórios — Sparzap{% endblock %}
+{% block page_title %}Relatórios{% endblock %}
+{% block topbar_extra %}
+<a href="{% url 'reports:backup' %}" class="border border-silver rounded-link px-4 py-2 text-sm">Backup / Restauração</a>
+{% endblock %}
+{% block app_content %}
+
+<div class="bg-surface border border-silver rounded-card p-6 mb-6">
+  <h3 class="font-sans font-medium mb-4">Funil de conversão (pipeline padrão)</h3>
+  <div class="flex flex-wrap gap-4">
+    {% for etapa in funil %}
+    <div class="flex-1 min-w-[120px] text-center">
+      <p class="text-2xl font-semibold">{{ etapa.total }}</p>
+      <p class="text-xs text-cool-gray">{{ etapa.etapa }}</p>
+      <p class="text-xs text-dark-green">{{ etapa.percentual }}%</p>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+
+<div class="bg-surface border border-silver rounded-card overflow-x-auto mb-6">
+  <table class="w-full text-sm">
+    <thead>
+      <tr class="text-xs font-mono uppercase text-cool-gray border-b border-silver">
+        <th class="text-left px-4 py-3">Campanha</th>
+        <th class="text-left px-4 py-3">Total</th>
+        <th class="text-left px-4 py-3">Enviadas</th>
+        <th class="text-left px-4 py-3">Respondidas</th>
+        <th class="text-left px-4 py-3">Taxa de resposta</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for c in campanhas %}
+      <tr class="border-b border-silver/50">
+        <td class="px-4 py-2.5"><a href="{% url 'campaigns:detail' c.campanha.pk %}" class="text-blue hover:underline">{{ c.campanha.nome }}</a></td>
+        <td class="px-4 py-2.5">{{ c.total }}</td>
+        <td class="px-4 py-2.5">{{ c.enviadas }}</td>
+        <td class="px-4 py-2.5">{{ c.respondidas }}</td>
+        <td class="px-4 py-2.5">{{ c.taxa_resposta }}%</td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="5" class="px-4 py-10 text-center text-cool-gray">Nenhuma campanha ainda.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<div class="bg-surface border border-silver rounded-card p-6">
+  <div class="flex items-center justify-between mb-4">
+    <h3 class="font-sans font-medium">Entregas por instância (últimos 30 dias)</h3>
+    <a href="{% url 'reports:delivery_export' %}" class="border border-silver rounded-link px-4 py-2 text-sm">Exportar CSV</a>
+  </div>
+  <ul class="text-sm space-y-1">
+    {% for instance in instancias %}
+    <li class="flex justify-between border-b border-silver/40 py-1.5"><span>{{ instance.nome }}</span></li>
+    {% endfor %}
+  </ul>
+  <p class="text-xs text-cool-gray mt-2">Detalhamento diário disponível no CSV exportado.</p>
+</div>
+{% endblock %}

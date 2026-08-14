@@ -1,0 +1,20 @@
+{% extends 'base_app.html' %}
+{% block title %}{% if object %}Editar{% else %}Novo{% endif %} script — Sparzap{% endblock %}
+{% block page_title %}{% if object %}Editar script{% else %}Novo script{% endif %}{% endblock %}
+{% block app_content %}
+<div class="max-w-lg bg-surface border border-silver rounded-card p-6">
+  <form method="post" class="flex flex-col gap-4">
+    {% csrf_token %}
+    {% for field in form %}
+      <div>
+        <label class="block text-sm font-medium mb-1.5" for="{{ field.id_for_label }}">{{ field.label }}</label>
+        {{ field }}
+      </div>
+    {% endfor %}
+    <div class="flex gap-2 mt-2">
+      <button type="submit" class="bg-dark-green text-white rounded-full px-5 py-2.5 text-sm font-semibold">Salvar</button>
+      <a href="{% url 'scripts:list' %}" class="border border-silver rounded-link px-5 py-2.5 text-sm">Cancelar</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

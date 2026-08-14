@@ -1,0 +1,25 @@
+{% if messages %}
+<div class="fixed top-4 right-4 z-[200] flex flex-col gap-2 max-w-sm w-full px-4 sm:px-0">
+  {% for message in messages %}
+    {% if message.tags == 'success' %}
+      {% with border='border-green' text='text-green' %}
+        <div class="flex items-start gap-2 rounded-link border {{ border }} bg-surface {{ text }} px-4 py-3 text-sm shadow-standard">
+          <span>✅</span><span class="flex-1">{{ message }}</span>
+        </div>
+      {% endwith %}
+    {% elif message.tags == 'warning' %}
+      <div class="flex items-start gap-2 rounded-link border border-warning bg-surface text-warning px-4 py-3 text-sm shadow-standard">
+        <span>⚠️</span><span class="flex-1">{{ message }}</span>
+      </div>
+    {% elif message.tags == 'error' %}
+      <div class="flex items-start gap-2 rounded-link border border-danger bg-surface text-danger px-4 py-3 text-sm shadow-standard">
+        <span>⛔</span><span class="flex-1">{{ message }}</span>
+      </div>
+    {% else %}
+      <div class="flex items-start gap-2 rounded-link border border-blue bg-surface text-blue px-4 py-3 text-sm shadow-standard">
+        <span>ℹ️</span><span class="flex-1">{{ message }}</span>
+      </div>
+    {% endif %}
+  {% endfor %}
+</div>
+{% endif %}

@@ -1,0 +1,23 @@
+{% extends 'base_app.html' %}
+{% block title %}{% if object %}Editar{% else %}Nova{% endif %} mensagem — Sparzap{% endblock %}
+{% block page_title %}{% if object %}Editar mensagem{% else %}Nova mensagem{% endif %}{% endblock %}
+{% block app_content %}
+<div class="max-w-xl bg-surface border border-silver rounded-card p-6">
+  <form method="post" enctype="multipart/form-data" class="flex flex-col gap-4">
+    {% csrf_token %}
+    {% if form.non_field_errors %}<p class="text-sm text-danger">{{ form.non_field_errors.0 }}</p>{% endif %}
+    {% for field in form %}
+      <div>
+        <label class="block text-sm font-medium mb-1.5" for="{{ field.id_for_label }}">{{ field.label }}</label>
+        {{ field }}
+        {% if field.errors %}<p class="text-xs text-danger mt-1">{{ field.errors.0 }}</p>{% endif %}
+      </div>
+    {% endfor %}
+    <p class="text-[11px] text-cool-gray">Variáveis suportadas: <code class="font-mono">&#123;&#123;nome&#125;&#125;</code> <code class="font-mono">&#123;&#123;grupo&#125;&#125;</code> <code class="font-mono">&#123;&#123;link&#125;&#125;</code> <code class="font-mono">&#123;&#123;empresa&#125;&#125;</code></p>
+    <div class="flex gap-2 mt-2">
+      <button type="submit" class="bg-dark-green text-white rounded-full px-5 py-2.5 text-sm font-semibold">Salvar</button>
+      <a href="{% url 'library:list' %}" class="border border-silver rounded-link px-5 py-2.5 text-sm">Cancelar</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

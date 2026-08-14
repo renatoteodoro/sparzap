@@ -1,0 +1,55 @@
+{% extends 'base_app.html' %}
+{% block title %}Grupos — Sparzap{% endblock %}
+{% block page_title %}Grupos{% endblock %}
+{% block app_content %}
+
+<div class="bg-surface border border-silver rounded-card p-5 mb-6">
+  <h3 class="font-sans font-medium mb-3">Sincronizar grupos de uma instância</h3>
+  <div class="flex flex-wrap gap-2">
+    {% for instance in instances %}
+    <form method="post" action="{% url 'contacts:group_sync' instance.pk %}">
+      {% csrf_token %}
+      <button type="submit" class="border border-silver rounded-link px-4 py-2 text-sm">Sincronizar "{{ instance.nome }}"</button>
+    </form>
+    {% empty %}
+    <p class="text-sm text-cool-gray">Nenhuma instância cadastrada.</p>
+    {% endfor %}
+  </div>
+</div>
+
+<div class="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+  {% for group in groups %}
+  <div class="bg-surface border border-silver rounded-card p-5">
+    <div class="flex items-start justify-between mb-2">
+      <h3 class="font-sans font-medium">{{ group.nome }}</h3>
+      {% if group.bot_e_admin %}<span class="text-xs text-warning">bot é admin</span>{% endif %}
+    </div>
+    <p class="text-xs text-cool-gray mb-1">{{ group.instance.nome }}</p>
+    <p class="text-sm text-cool-gray mb-4">{{ group.membros_count }} membros</p>
+    <div class="flex flex-col gap-2">
+      <form method="post" action="{% url 'contacts:group_extract' group.pk %}">
+        {% csrf_token %}
+        <button type="submit" class="w-full bg-dark-green text-white rounded-full py-2 text-sm font-semibold">Extrair participantes</button>
+      </form>
+      {% if group.bot_e_admin %}
+      <form method="post" action="{% url 'contacts:group_demote' group.pk %}" onsubmit="return confirm('Remover o admin do bot neste grupo?');">
+        {% csrf_token %}
+        <button type="submit" class="w-full border border-warning text-warning rounded-full py-2 text-sm font-semibold">Remover admin do bot</button>
+      </form>
+      {% endif %}
+      <details class="text-sm">
+        <summary class="cursor-pointer text-blue">Enviar mensagem ao grupo</summary>
+        <form method="post" action="{% url 'contacts:group_send' group.pk %}" class="flex flex-col gap-2 mt-2">
+          {% csrf_token %}
+          <textarea name="texto" rows="2" placeholder="Mensagem para o grupo" class="w-full bg-surface text-ink border border-silver rounded-input px-3 py-2 text-sm"></textarea>
+          <label class="flex items-center gap-2 text-xs text-cool-gray"><input type="checkbox" name="mencionar_todos" class="rounded border-silver"> Mencionar todos</label>
+          <button type="submit" class="border border-silver rounded-link py-1.5 text-sm">Enviar</button>
+        </form>
+      </details>
+    </div>
+  </div>
+  {% empty %}
+  <p class="text-sm text-cool-gray">Nenhum grupo sincronizado ainda.</p>
+  {% endfor %}
+</div>
+{% endblock %}

@@ -1,0 +1,56 @@
+{% extends 'base_app.html' %}
+{% load sparzap_extras %}
+{% block title %}Conectar {{ instance.nome }} — Sparzap{% endblock %}
+{% block page_title %}Conectar — {{ instance.nome }}{% endblock %}
+
+{% block app_content %}
+<div class="grid gap-6 md:grid-cols-2 max-w-3xl">
+  <div class="bg-surface border border-silver rounded-card p-6 text-center">
+    <div class="mb-3">{% status_badge instance.status instance.get_status_display %}</div>
+
+    {% if qrcode_base64 %}
+      <img src="data:image/png;base64,{{ qrcode_base64 }}" alt="QR Code" class="mx-auto rounded-link border border-silver" width="260" height="260">
+      <p class="text-xs text-cool-gray mt-3">Escaneie no WhatsApp em Aparelhos conectados.</p>
+    {% elif evolution_error %}
+      <p class="text-sm text-danger">Não foi possível obter o QR: {{ evolution_error }}</p>
+      <p class="text-xs text-cool-gray mt-2">Confira <code class="font-mono">EVOLUTION_BASE_URL</code>/<code class="font-mono">EVOLUTION_API_KEY</code> no <code class="font-mono">.env</code>.</p>
+    {% else %}
+      <p class="text-sm text-cool-gray">Instância já conectada.</p>
+    {% endif %}
+
+    <form method="post" action="{% url 'instances:refresh_status' instance.pk %}" class="mt-4">
+      {% csrf_token %}
+      <button type="submit" class="border border-silver rounded-link px-4 py-2 text-sm">Atualizar status</button>
+    </form>
+  </div>
+
+  <div class="flex flex-col gap-4">
+    <div class="bg-surface border border-silver rounded-card p-6">
+      <h3 class="font-sans font-medium mb-3">Enviar mensagem de teste</h3>
+      <form method="post" action="{% url 'instances:test_message' instance.pk %}" class="flex flex-col gap-3">
+        {% csrf_token %}
+        {% for field in test_form %}
+          <div>
+            <label class="block text-sm font-medium mb-1.5" for="{{ field.id_for_label }}">{{ field.label }}</label>
+            {{ field }}
+          </div>
+        {% endfor %}
+        <button type="submit" class="bg-dark-green text-white rounded-full py-2.5 text-sm font-semibold">Enviar teste</button>
+      </form>
+    </div>
+
+    <div class="bg-surface border border-silver rounded-card p-6">
+      <h3 class="font-sans font-medium mb-3">Configuração</h3>
+      <dl class="text-sm space-y-1.5 mb-4">
+        <div class="flex justify-between"><dt class="text-cool-gray">Limite diário</dt><dd>{{ instance.limite_diario }}</dd></div>
+        <div class="flex justify-between"><dt class="text-cool-gray">Janela</dt><dd>{{ instance.janela_inicio }} – {{ instance.janela_fim }}</dd></div>
+      </dl>
+      <p class="text-xs text-cool-gray mb-1">Enviadas hoje: {{ enviadas_hoje }}/{{ instance.limite_diario }}</p>
+      <div class="w-full h-2 bg-silver/30 rounded-full overflow-hidden">
+        <div class="h-2 {% if percentual_hoje >= 80 %}bg-warning{% else %}bg-green{% endif %}" style="width: {{ percentual_hoje }}%"></div>
+      </div>
+      <a href="{% url 'instances:update' instance.pk %}" class="inline-block mt-4 text-sm text-blue hover:underline">Editar configuração</a>
+    </div>
+  </div>
+</div>
+{% endblock %}
