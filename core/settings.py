@@ -183,6 +183,10 @@ CELERY_RESULT_SERIALIZER = 'json'
 CELERY_TIMEZONE = TIME_ZONE
 CELERY_BEAT_SCHEDULER = 'django_celery_beat.schedulers:DatabaseScheduler'
 
+# A suíte roda sempre em modo eager, mesmo com broker configurado no .env —
+# ver core/test_runner.py.
+TEST_RUNNER = 'core.test_runner.SparzapTestRunner'
+
 
 # Django REST Framework
 REST_FRAMEWORK = {
