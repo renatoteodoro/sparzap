@@ -1,0 +1,32 @@
+# Override para SIMULAR produção nesta máquina, sem tocar no
+# docker-compose.prod.yml (que é o desenho real de VPS).
+#
+#   docker compose -f docker-compose.prod.yml -f docker-compose.prod-local.yml up -d --build
+#
+# Diferenças em relação à VPS:
+#   - lê o .env.prod em vez do .env (que é o de desenvolvimento);
+#   - monta o db.sqlite3 do host, já que aqui não há Postgres para o Sparzap.
+#
+# ⚠️ SQLite com web + worker + beat no mesmo arquivo pode dar "database is
+# locked" sob carga. É aceitável para simulação; em produção use Postgres.
+
+services:
+  web:
+    env_file: .env.prod
+    volumes:
+      - media:/app/media
+      - ./db.sqlite3:/app/db.sqlite3
+
+  worker:
+    env_file: .env.prod
+    volumes:
+      - media:/app/media
+      - ./db.sqlite3:/app/db.sqlite3
+
+  beat:
+    env_file: .env.prod
+    volumes:
+      - ./db.sqlite3:/app/db.sqlite3
+
+volumes:
+  media:
