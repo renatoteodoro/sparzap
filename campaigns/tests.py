@@ -377,3 +377,60 @@ class RevalidarAdminsAntesDoDisparoTests(TestCase):
 
         campaign.refresh_from_db()
         self.assertEqual(campaign.status, Campaign.STATUS_EM_ANDAMENTO)
+
+
+class BuildAudienceEmLoteTests(TestCase):
+    """
+    Regressão de performance: `build_audience` gravava com `get_or_create` num
+    loop — um grupo real de 778 membros custava ~1.560 queries em sequência, e
+    o gunicorn abortava a request no timeout de 30s ("Internal Server Error"
+    ao iniciar o disparo). O runserver, que não tem timeout, só ficava lento e
+    escondia o problema.
+    """
+
+    def setUp(self):
+        from contacts.models import Contact, Group, GroupMember
+        from core.factories import make_campaign, make_instance, make_user
+
+        self.owner = make_user(email='lote@teste.com')
+        self.instance = make_instance(owner=self.owner)
+        self.campaign = make_campaign(owner=self.owner, instance=self.instance)
+
+        self.grupo = Group.objects.create(instance=self.instance, nome='Grupo Grande', jid='grupo@g.us')
+        for i in range(30):
+            contato = Contact.objects.create(owner=self.owner, numero_e164=f'+5511900{i:06d}')
+            GroupMember.objects.create(group=self.grupo, contact=contato)
+        self.campaign.grupos.add(self.grupo)
+
+    def test_grava_todos_os_membros_do_grupo(self):
+        criados = campaigns_services.build_audience(self.campaign)
+
+        self.assertEqual(criados, 30)
+        self.assertEqual(self.campaign.campaign_contacts.count(), 30)
+
+    def test_guarda_o_grupo_de_origem_de_cada_contato(self):
+        campaigns_services.build_audience(self.campaign)
+
+        origens = set(self.campaign.campaign_contacts.values_list('origem_grupo_id', flat=True))
+        self.assertEqual(origens, {self.grupo.id})
+
+    def test_rodar_de_novo_nao_duplica_nem_recria(self):
+        campaigns_services.build_audience(self.campaign)
+
+        criados_na_segunda = campaigns_services.build_audience(self.campaign)
+
+        self.assertEqual(criados_na_segunda, 0)
+        self.assertEqual(self.campaign.campaign_contacts.count(), 30)
+
+    def test_custo_em_queries_nao_cresce_com_o_tamanho_do_publico(self):
+        from django.db import connection
+        from django.test.utils import CaptureQueriesContext
+
+        with CaptureQueriesContext(connection) as queries:
+            campaigns_services.build_audience(self.campaign)
+
+        self.assertLess(
+            len(queries),
+            15,
+            f'{len(queries)} queries para 30 contatos — o custo está crescendo com o tamanho do público',
+        )

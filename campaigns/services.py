@@ -30,16 +30,25 @@ def build_audience(campaign):
     contatos = _aplicar_filtro_publico(campaign, contatos)
     contatos = _aplicar_antiduplicacao(campaign, contatos)
 
-    criados = 0
-    for contact in contatos:
-        _, created = CampaignContact.objects.get_or_create(
+    # Uma query para saber quem já está na campanha e um INSERT em lote para o
+    # resto. Com `get_or_create` num loop, um grupo real de 778 membros custava
+    # ~1.560 queries em sequência e o gunicorn abortava a request no timeout de
+    # 30s. `ignore_conflicts` cobre a corrida de dois disparos simultâneos —
+    # `uniq_campaign_contact` garante que nada duplica.
+    ja_na_campanha = set(
+        CampaignContact.objects.filter(campaign=campaign).values_list('contact_id', flat=True)
+    )
+    novos = [
+        CampaignContact(
             campaign=campaign,
             contact=contact,
-            defaults={'origem_grupo': origem_grupo_por_contato.get(contact)},
+            origem_grupo=origem_grupo_por_contato.get(contact),
         )
-        if created:
-            criados += 1
-    return criados
+        for contact in contatos
+        if contact.id not in ja_na_campanha
+    ]
+    CampaignContact.objects.bulk_create(novos, ignore_conflicts=True)
+    return len(novos)
 
 
 def _aplicar_filtro_publico(campaign, contatos):
