@@ -34,5 +34,5 @@ está só o que um dev precisa para trabalhar no código.
 
 | Documento | Conteúdo |
 |---|---|
-| [DEPLOY.md](DEPLOY.md) | Deploy em VPS com Docker Compose |
+| [DEPLOY.md](DEPLOY.md) | Deploy em VPS com Docker Compose (e o ensaio local que já validou parte dele) |
 | [RUNBOOK.md](RUNBOOK.md) | O que fazer quando algo quebra em produção |

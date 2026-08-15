@@ -73,6 +73,11 @@ a cada envio (`library.services.pick_variant`).
 
 **`Script`** — sequência nomeada de passos.
 
+`usar_ia` (padrão `True`) é o **interruptor geral da IA** do script, alternado
+pelo botão na tela dele (`scripts:toggle_ia`). Desligado, nenhum passo consulta
+IA mesmo com `ia_config` configurada — serve para pausar rápido (crédito da API
+acabou, provedor instável) sem editar passo por passo.
+
 **`ScriptStep`** — um passo, ordenado por `ordem` (único por script).
 
 | `tipo` | Campos usados |
@@ -109,8 +114,29 @@ pelo passo "condição" dos scripts quando `usar_ia` está ligado.
 | `base_url` | Só usado quando `provider = openai_compativel` |
 
 `ai.services.classificar(config, descricao, texto)` retorna `True`/`False`
-se a IA respondeu com sucesso, ou `None` se falhou — `scripts.services.
-_resolve_condicao` cai no `condicao_contem` de sempre quando recebe `None`.
+se a IA respondeu com sucesso, ou `None` se falhou — `scripts.services._resolve_condicao`
+cai no `condicao_contem` de sempre quando recebe `None`.
+
+A IA só é consultada quando **tudo** abaixo vale; qualquer item que falte cai
+no matching por palavra-chave:
+
+- `Script.usar_ia` ligado (interruptor geral do script);
+- `ScriptStep.usar_ia` ligado, com `ia_config` preenchida e `ativo=True`;
+- `condicao_ia_descricao` não vazia (sem critério a IA chuta);
+- texto não vazio (um timeout sem resposta chega com `texto=''`).
+
+**A descrição precisa apontar na mesma direção do `condicao_contem`.** O
+resultado da IA é usado com a mesma semântica: casou → pula para
+`proximo_passo`; não casou → segue na ordem. Como a convenção do projeto é
+condicionar nos termos negativos (ver o `help_text` de `proximo_passo`),
+descrever o critério ao contrário inverte o funil inteiro — quem aceita
+recebe a mensagem de recusa.
+
+O `PROMPT_TEMPLATE` em `ai/services.py` é deliberadamente **neutro quanto à
+direção**: quem diz o que conta como SIM é só a descrição do passo. Uma
+orientação fixa no template ("concordar conta como SIM") contradiz descrições
+opostas e inverte toda a classificação — `ai.tests.PromptTemplateTests` existe
+para impedir que isso volte.
 
 ## campaigns
 

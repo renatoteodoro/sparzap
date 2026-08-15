@@ -75,6 +75,7 @@ nomes de rota (`{% url %}` / `reverse`) em inglês, no formato `app:nome`.
 | `<pk>/testar/` | `test_run` |
 | `<script_pk>/passos/novo/` | `step_create` |
 | `<script_pk>/passos/<pk>/remover/` | `step_delete` |
+| `<pk>/ia/toggle/` | `toggle_ia` — **só POST**; alterna `Script.usar_ia` (interruptor geral da IA nos passos de condição) |
 
 ## Campanhas — `/campanhas/` (`campaigns:`)
 
@@ -114,6 +115,15 @@ nomes de rota (`{% url %}` / `reverse`) em inglês, no formato `app:nome`.
 | `` | `warmup` |
 | `<instance_pk>/iniciar/` | `warmup_start` |
 | `planos/<pk>/pausar/` · `planos/<pk>/retomar/` | `warmup_pause` · `warmup_resume` |
+
+## IA — `/ia/` (`ai:`)
+
+Credenciais de IA da conta (provedor, modelo, API key), usadas pelos passos
+de condição dos scripts.
+
+| URL | Nome |
+|---|---|
+| `` · `nova/` · `<pk>/editar/` · `<pk>/remover/` | `list` · `create` · `update` · `delete` |
 
 ## Relatórios — `/relatorios/` (`reports:`)
 

@@ -16,7 +16,7 @@ Ambiente Windows com venv em `.venv/`. Os comandos assumem `.venv\Scripts\`.
 .venv\Scripts\python manage.py check
 
 # Testes
-.venv\Scripts\python manage.py test                                    # suíte completa (128 testes)
+.venv\Scripts\python manage.py test                                    # suíte completa (218 testes)
 .venv\Scripts\python manage.py test antiblock                          # um app
 .venv\Scripts\python manage.py test antiblock.tests.CanSendTests        # uma classe
 .venv\Scripts\python manage.py test antiblock.tests.CanSendTests.test_bloqueia_fora_da_janela   # um teste
@@ -43,7 +43,7 @@ linha de 120, aspas simples preservadas, migrations excluídas.
 
 ## Arquitetura
 
-13 apps Django por domínio. `core` acumula dois papéis — pacote do projeto
+14 apps Django por domínio. `core` acumula dois papéis — pacote do projeto
 (settings/wsgi/celery) **e** app "de casa" (landing, dashboard, `BaseModel`,
 alertas, factories) — por isso suas rotas ficam direto em `core/urls.py`,
 sem namespace, enquanto as outras entram por `include()` com `app_name`.
@@ -135,6 +135,50 @@ Inclusive logout — o `LogoutView` do Django rejeita GET com 405. Use
 quebra qualquer teste que renderize `{% static %}`. Por isso `core/settings.py`
 escolhe o storage por `DEBUG`. Não torne incondicional.
 
+### O prompt da IA não pode presumir a direção do critério
+
+`ai.services.PROMPT_TEMPLATE` é neutro de propósito: quem diz o que conta
+como SIM é só a `condicao_ia_descricao` do passo. Uma orientação fixa no
+template ("se a pessoa concorda, conta como SIM") contradiz descrições de
+direção oposta ("o contato recusou") e a IA — obedecendo à instrução mais
+específica — **inverte toda a classificação**: quem aceita o convite recebe a
+mensagem de recusa.
+
+Isso passou despercebido porque todos os testes mockavam o SDK e nenhum olhava
+o conteúdo do prompt. `ai.tests.PromptTemplateTests` fecha essa porta. Quando
+mockar `ai.services.classificar`, use `autospec=True`.
+
+### Ramo de funil precisa de um passo `encerrar`
+
+Passo de mensagem sempre avança para `ordem + 1`. Num funil de dois ramos
+(condição → mensagem A / mensagem B), o ramo de cima escorrega para dentro do
+ramo de baixo e o contato recebe as duas mensagens. O tipo `encerrar` conclui
+o run e marca o fim do ramo; omiti-lo é o que faz os dois ramos convergirem
+de propósito numa mensagem final comum.
+
+### O `runserver` esconde problemas de performance
+
+Ele não tem timeout; o gunicorn aborta em 30s. Foi assim que `build_audience`
+com `get_or_create` num loop (3.117 queries para 778 contatos) passou até
+alguém rodar em modo produção. Teste operações sobre público grande com
+`deploy/modo.sh prod`, e meça **queries**, não tempo.
+
+### Trocar de modo exige reapontar o webhook
+
+Dev (`:8000`) e produção local (`:80` no nginx) usam a mesma Evolution, que
+guarda **uma** URL de webhook por instância. Trocar sem reapontar faz as
+respostas do WhatsApp sumirem sem erro nenhum. `deploy/modo.sh` cuida disso
+chamando `manage.py registrar_webhooks` — o mesmo comando serve na VPS quando
+o domínio mudar.
+
+### `SECRET_KEY` com `$` chega corrompida no container
+
+O Docker Compose interpola `$var` ao ler o `env_file`. Gere sem `$`/`#`:
+`python -c "import secrets; print(secrets.token_urlsafe(50))"`. E defina
+`AI_FIELD_ENCRYPTION_KEY` explicitamente em produção — sem ela a chave é
+derivada do `SECRET_KEY`, e trocar o `SECRET_KEY` torna as API keys de IA já
+gravadas indecifráveis.
+
 ## Convenções
 
 - **Idioma**: domínio em português (campos, status, `verbose_name`, mensagens
@@ -183,10 +227,14 @@ divergir do código, atualize o documento.
 
 ## Estado
 
-Sprints 0–19 concluídas: 13 apps, 128 testes passando, flake8 limpo,
-integração validada contra Evolution API v2.3.7 real. O deploy em VPS está
-escrito mas **não foi executado** contra servidor real (ver
-[`docs/DEPLOY.md`](docs/DEPLOY.md)).
+Sprints 0–19 concluídas, mais a classificação por IA nos passos de condição
+(app `ai`): 14 apps, 218 testes passando, flake8 limpo, integração validada
+contra Evolution API v2.3.7 real e contra provedor de IA real.
+
+O stack de produção foi exercitado **localmente** (`deploy/modo.sh prod`), o
+que validou Dockerfile, collectstatic/WhiteNoise, Nginx, CSRF com `DEBUG=False`
+e a cadeia webhook → gunicorn → Redis → worker. Contra **VPS real ainda não
+foi executado** (ver [`docs/DEPLOY.md`](docs/DEPLOY.md)).
 
 As fases F1–F6 do PRD (seção 14) dependem de decisões de negócio e
 credenciais que ainda não existem — não implemente nada delas sem

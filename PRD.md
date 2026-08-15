@@ -64,7 +64,8 @@ própria aplicação.
 | `webhooks` | Receptor de eventos da Evolution (`messages.upsert`, `connection.update`, …) |
 | `contacts` | Contatos, grupos, etiquetas, importação CSV e exportação |
 | `library` | Biblioteca de mensagens rápidas (texto, áudio, imagem, vídeo, documento) |
-| `scripts` | Scripts automáticos (passos, delays, aguardar resposta, condições) |
+| `scripts` | Scripts automáticos (passos, delays, aguardar resposta, condições, encerrar ramo) |
+| `ai` | Credenciais de IA por conta (provedor, modelo, API key cifrada) usadas na avaliação das condições |
 | `campaigns` | Campanhas de disparo em massa, público, fila, logs de entrega |
 | `antiblock` | Controlador de ritmo: limites, pausas, randomizador, aquecimento |
 | `triggers` | Gatilhos por palavra-chave e mensagens agendadas individuais |
@@ -254,12 +255,32 @@ concorrentes → extrair participantes → disparo em 2 passos (msg 1 induz resp
 ### 6.5 Scripts Automáticos (`scripts`)
 
 - **RF-29** Script = sequência ordenada de passos.
-- **RF-30** Tipos de passo: `mensagem`, `delay`, `aguardar_resposta`, `condição`, `mudar_etapa`.
+- **RF-30** Tipos de passo: `mensagem`, `delay`, `aguardar_resposta`, `condição`, `mudar_etapa`, `encerrar`.
 - **RF-31** Passo `aguardar_resposta` com timeout configurável (ex.: 48h) e ação de fallback.
 - **RF-32** Condição simples: "se a resposta contiver X → ir para o passo Y".
 - **RF-33** Editor visual simples (lista ordenada, arrastar para reordenar).
 - **RF-34** **Modo teste**: executar o script para um único contato.
 - **RF-35** Duplicar script.
+- **RF-85** Passo `encerrar`: marca o fim de um ramo do funil. Sem ele o passo
+  de mensagem avança para `ordem + 1` e o ramo positivo escorrega para dentro
+  do ramo negativo (alvo do pulo da condição), mandando as duas mensagens ao
+  mesmo contato. Omiti-lo é o que faz os dois ramos convergirem de propósito.
+- **RF-86** **Condição avaliada por IA** (implementado): o passo `condição`
+  pode classificar a intenção da resposta com um LLM em vez de casar
+  palavra-chave, resolvendo o falso negativo clássico de "não sei, mas pode
+  mandar" (que o matching por trecho classifica como recusa por conter "nao").
+  - Credencial por conta (app `ai`): provedor, modelo e API key cifrada em
+    repouso. Provedores: **Claude (Anthropic)**, **OpenAI**, **Google Gemini**
+    e **compatível com OpenAI** (URL base própria — cobre gateways como
+    OpenCode Zen, OpenRouter etc.).
+  - **Fallback obrigatório**: qualquer falha (rede, autenticação, timeout,
+    resposta fora do padrão) devolve `None` e o passo cai no `condicao_contem`
+    de sempre. Falha de IA nunca trava o motor nem o webhook.
+  - **Interruptor por script** (`Script.usar_ia`, botão na tela): desliga a IA
+    do script inteiro sem editar passo a passo — para quando o crédito da API
+    acaba ou o provedor fica instável.
+  - Distinto do **RF-55** (chatbot contextual, ainda não implementado): aqui a
+    IA só decide um desvio binário do funil, não redige resposta.
 
 ### 6.6 Disparo em Massa (`campaigns`)
 
@@ -302,11 +323,16 @@ remover o próprio admin (`POST /group/updateParticipant` com `action=demote`) p
 - **RF-53** **Gatilho por horário**: mensagem individual agendada para um lead em data/hora específica
   (ex.: follow-up amanhã às 14h) — distinto do disparo em massa agendado.
 - **RF-54** Prioridade/ordem de avaliação entre regras e limite anti-loop (não responder 2× em N minutos).
-- **RF-55** **Resposta com IA (chatbot contextual)** *(v2)*: LLM responde perguntas abertas;
+- **RF-55** **Resposta com IA (chatbot contextual)** *(v2, pendente)*: LLM responde perguntas abertas;
   se não souber → alerta humano no painel + lead entra na fila de atendimento.
+  Não confundir com o **RF-86** (já implementado), em que a IA só classifica a
+  intenção da resposta para escolher o ramo do funil, sem redigir nada. A
+  credencial multi-provedor do app `ai` já existe e serviria de base aqui.
 - **RF-55a** **Mensagem de ausência/encerramento** *(inspirado no Total Chat)*: mensagem automática
   da biblioteca disparada fora do horário comercial (ex.: "Olá! Estamos fora do horário...") e
   mensagem de encerramento ao fim do expediente; configuração por instância com janela de horário.
+  A janela de operação por instância (`janela_inicio`/`janela_fim`, RF-05) já existe e define o
+  "fora do horário"; falta a mensagem automática em si.
 
 ### 6.8 CRM / Etapas (`crm`)
 
@@ -1534,6 +1560,34 @@ de um painel operacional.
 
 ---
 
+### 🧠 Sprint 20 — Condição avaliada por IA (RF-86) *(concluída, fora do plano original)*
+
+**Objetivo:** Deixar o passo `condição` julgar a intenção da resposta em vez de
+casar trecho de texto — "não sei, mas pode mandar" era classificado como recusa
+só por conter "nao".
+
+- [X] **20.1** App `ai`: `AIConfig` por conta (provedor, modelo, API key cifrada com Fernet), CRUD em `/ia/`
+- [X] **20.2** `ai.services.classificar` com adaptador para Claude, OpenAI, Gemini e compatível-OpenAI (URL base própria)
+- [X] **20.3** Integração em `scripts.services._resolve_condicao`, com fallback para `condicao_contem` em qualquer falha
+- [X] **20.4** Interruptor por script (`Script.usar_ia`) com botão na tela
+- [X] **20.5** Passo `encerrar` (RF-85) — sem ele o ramo positivo do funil escorregava para o negativo
+- [X] **20.6** Validado contra provedor real (OpenCode Zen / deepseek-v4-flash) e no WhatsApp de ponta a ponta
+
+Achados corrigidos durante a validação, todos com teste de regressão:
+
+| Achado | Efeito |
+|---|---|
+| `PROMPT_TEMPLATE` com direção fixa | Invertia **toda** a classificação quando o critério apontava para o outro lado; nenhum teste olhava o prompt |
+| Ramo sem `encerrar` | Contato recebia as duas mensagens (link **e** recusa) |
+| `build_audience` com `get_or_create` em loop | 3.117 queries para 778 contatos → `WORKER TIMEOUT` do gunicorn ao iniciar campanha |
+| Suíte dependia de `CELERY_TASK_ALWAYS_EAGER` do `.env` | 10 testes quebravam com broker real; resolvido com `TEST_RUNNER` próprio |
+| `SECRET_KEY` com `$` | Chega corrompida no container (o Compose interpola `$var`) |
+
+> **218 testes passando**, flake8 limpo. Stack de produção exercitado
+> localmente (`deploy/modo.sh prod`); contra VPS real segue pendente.
+
+---
+
 ### 🤖 Sprint F1 — Respondedor com IA + Fallback Humano *(futuro — E3)*
 
 **Objetivo:** Fazer a IA responder o grosso das perguntas abertas e escalar para humano quando não souber.
@@ -1610,6 +1664,13 @@ de um painel operacional.
 | **E6** | Teste A/B de mensagens com aplicação automática da vencedora | F2 |
 | **E7** | Anti-duplicação por lead — **antecipado para a v1** (Sprint 8) | ✔ v1 |
 | **E8** | Painel em tempo real — **antecipado para a v1** (Sprint 12) | ✔ v1 |
+| **E9** | Condição avaliada por IA multi-provedor (RF-86) — **antecipado**, entregue depois da Sprint 19 | ✔ feito |
+
+**E3 (respondedor IA / RF-55) continua pendente.** O que foi entregue em E9 é
+a camada de decisão — a IA classifica a intenção da resposta para escolher o
+ramo do funil. Ela não redige resposta nem sustenta conversa aberta, e não há
+fila de atendimento humano. A credencial multi-provedor do app `ai` é a base
+sobre a qual E3 seria construído.
 
 ### Próximos Passos Imediatos
 

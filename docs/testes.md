@@ -1,7 +1,7 @@
 # Testes
 
-Test runner nativo do Django, um `tests.py` por app. **128 testes** hoje,
-cobertura de ~65%.
+Test runner próprio (`core.test_runner.SparzapTestRunner`, uma subclasse do
+runner nativo), um `tests.py` por app. **218 testes** hoje.
 
 ```bash
 .venv\Scripts\python manage.py test              # tudo
@@ -11,11 +11,22 @@ cobertura de ~65%.
 .venv\Scripts\python -m coverage report
 ```
 
-Distribuição atual: `contacts` 18 · `antiblock` 15 · `campaigns` 12 ·
-`accounts` 11 · `crm` 11 · `triggers` 10 · `webhooks` 9 · `api` 8 ·
-`instances` 8 · `reports` 8 · `core` 7 · `scripts` 7 · `library` 4.
+Distribuição atual: `scripts` 39 · `contacts` 39 · `campaigns` 19 · `ai` 18 ·
+`antiblock` 16 · `triggers` 13 · `core` 12 · `instances` 11 · `crm` 11 ·
+`accounts` 11 · `webhooks` 9 · `reports` 8 · `api` 8 · `library` 4.
 
 ## Regras
+
+### A suíte não depende do Celery da máquina
+
+`core/test_runner.py` força `task_always_eager` em toda a suíte. Sem isso,
+rodar os testes numa máquina com broker de verdade (`CELERY_TASK_ALWAYS_EAGER=False`
+no `.env`, necessário para testar o ritmo real de uma campanha) enfileira as
+tasks em vez de executá-las, e ~10 testes quebram: o webhook não processa o
+evento, a campanha não dispara, o script não avança.
+
+Mexer só no `settings` não basta — o app do Celery já leu a config no import,
+então o runner também escreve em `celery_app.conf`.
 
 ### Nunca chame a Evolution API de verdade
 
@@ -29,6 +40,41 @@ def test_dispatch_sucesso(self, mock_send):
 ```
 
 Vale para `send_text`, `connect`, `connection_state`, `fetch_all_groups` etc.
+
+### Nem a IA — e cuidado com o que o mock esconde
+
+Nenhum teste chama provedor de IA. Mocke o SDK na fronteira
+(`anthropic.Anthropic`, `openai.OpenAI`, `google.genai.Client`), não o
+`ai.services.classificar`.
+
+Mockar `classificar` direto testa cada camada contra a sua própria versão
+imaginada da outra. Foi assim que uma inversão passou: o
+`PROMPT_TEMPLATE` embutia uma direção fixa ("concordar conta como SIM") que
+contradizia descrições de direção oposta e invertia TODA a classificação —
+e nenhum teste olhava o conteúdo do prompt. Hoje `ai.tests.PromptTemplateTests`
+falha se o template voltar a presumir direção, e
+`scripts.tests.ResolveCondicaoIAEndToEndTests` exercita a pilha inteira
+mockando só o SDK.
+
+Quando precisar mockar `classificar` (nos testes do motor), use
+`autospec=True`: sem isso o mock aceita qualquer assinatura e uma troca na
+ordem dos argumentos passa despercebida.
+
+### Um teste que não pode falhar não é um teste
+
+O primeiro `ResolveCondicaoIAEndToEndTests` apontava o desvio da condição
+para o mesmo passo do fluxo normal — todos os caminhos possíveis (IA disse
+sim, disse não, ou falhou) terminavam no mesmo lugar, e a única asserção
+nunca falharia. Ao montar um teste de roteamento, garanta que os alvos dos
+dois ramos sejam distintos e confirme que o mock foi realmente chamado.
+
+### Custo em queries também é comportamento
+
+`campaigns.tests.BuildAudienceEmLoteTests` mede **número de queries**, não
+tempo: `build_audience` gravava um `get_or_create` por contato, e um grupo
+real de 778 membros custava 3.117 queries — o gunicorn abortava a request
+no timeout de 30s, enquanto o `runserver`, sem timeout, só ficava lento e
+escondia o problema. Tempo varia por máquina; round-trips, não.
 
 ### Não dependa da hora em que o teste roda
 

@@ -24,7 +24,7 @@ Navegador ──HTTP──> Django (web)  ──HTTP──> Evolution API ──
 | `webhooks` | Recebimento e processamento dos eventos da Evolution | `/webhooks/` |
 | `contacts` | Contatos, etiquetas, listas, grupos, import/export CSV, auto-demote | `/contatos/` |
 | `library` | Biblioteca de mensagens, variações (spintax), variáveis `{{nome}}` | `/mensagens/` |
-| `scripts` | Sequências de passos (mensagem/delay/aguardar resposta/condição) e o motor que as executa | `/scripts/` |
+| `scripts` | Sequências de passos (mensagem/delay/aguardar resposta/condição/encerrar) e o motor que as executa | `/scripts/` |
 | `campaigns` | Campanhas de disparo em massa, público, progresso em tempo real | `/campanhas/` |
 | `antiblock` | Controle de ritmo, limites, janela de operação, aquecimento de número | `/aquecimento/` |
 | `triggers` | Gatilhos por palavra-chave e mensagens agendadas (follow-up) | `/gatilhos/` |
@@ -61,6 +61,9 @@ Nem todo app tem todos os arquivos — `reports` usa `backup.py` no lugar de
 
 1. `campaigns.services.start_campaign` materializa o público
    (`build_audience`) em `CampaignContact` e enfileira `dispatch_campaign`.
+   O público é gravado com um `bulk_create` — com um `get_or_create` por
+   contato, um grupo de 778 membros custava 3.117 queries em sequência e
+   estourava o timeout de 30s do gunicorn.
 2. `dispatch_campaign` agenda um `send_campaign_contact` por contato, com
    `countdown` cumulativo calculado por `antiblock.next_delay_seconds` —
    é isso que dá o espaçamento aleatório entre envios.

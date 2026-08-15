@@ -67,14 +67,20 @@ Duas opções:
 
 Instâncias criadas **depois** do deploy já registram o webhook sozinhas
 (`instances.services.provision_instance` usa `EVOLUTION_WEBHOOK_BASE_URL`).
-Para instâncias que já existiam antes, refaça o registro manualmente:
+As que já existiam continuam apontando para o endereço antigo — a Evolution
+guarda a URL de quando a instância foi criada, e **o sintoma é silencioso**:
+ela segue chamando o endereço velho, as respostas do WhatsApp somem e nenhum
+erro aparece em lugar nenhum.
+
+Reescreva o registro de todas as instâncias de uma vez:
 
 ```bash
-curl -X POST http://localhost:8080/webhook/set/<nome-da-instancia> \
-  -H "apikey: <EVOLUTION_API_KEY>" \
-  -H "Content-Type: application/json" \
-  -d '{"webhook": {"url": "https://seu-dominio/webhooks/evolution/<nome-da-instancia>/?token=<EVOLUTION_WEBHOOK_SECRET>", "enabled": true, "events": ["MESSAGES_UPSERT","MESSAGES_UPDATE","CONNECTION_UPDATE","CONTACTS_UPSERT"]}}'
+docker compose -f docker-compose.prod.yml exec web python manage.py registrar_webhooks
+docker compose -f docker-compose.prod.yml exec web python manage.py registrar_webhooks --dry-run  # só mostra as URLs
 ```
+
+O comando usa a `EVOLUTION_WEBHOOK_BASE_URL` atual, e uma instância fora do ar
+não impede o registro das outras. **Rode sempre que o domínio mudar.**
 
 ## Backup do banco (dump periódico)
 
@@ -113,10 +119,31 @@ downtime (só recria os containers cujo build mudou).
 | Sintoma | Causa provável | O que checar |
 |---|---|---|
 | `web` reinicia em loop | Erro de configuração no `.env` (SECRET_KEY, DB) | `docker compose logs web` |
+| Sessões caem sozinhas / `SECRET_KEY` "muda" | **`SECRET_KEY` com `$` no `.env`** — o Compose interpola `$var` ao ler o `env_file` e a chave chega corrompida no container (aqui um `$_` virou o caminho do `docker.exe`) | `docker compose exec web python -c "import os; print(repr(os.environ['SECRET_KEY']))"` e compare com o arquivo. Gere sem `$`/`#`: `python -c "import secrets; print(secrets.token_urlsafe(50))"` |
+| API keys de IA param de decifrar | `SECRET_KEY` mudou e `AI_FIELD_ENCRYPTION_KEY` não estava definida (era derivada dele) | Defina `AI_FIELD_ENCRYPTION_KEY` explicitamente e trate como segredo permanente |
+| Respostas do WhatsApp não surtem efeito | Worker fora do ar (tasks ficam enfileiradas, sem erro) ou webhook apontando para o endereço antigo | `docker compose ps worker`; `manage.py registrar_webhooks --dry-run` |
+| `WORKER TIMEOUT` / 500 ao iniciar campanha grande | Request passando de 30s (timeout do gunicorn) | `docker compose logs web \| grep TIMEOUT`. O `runserver` não tem timeout e esconde esse tipo de problema — teste operações pesadas em modo produção |
+| Código novo não surte efeito | `restart` reinicia o container com a **imagem antiga** | Rebuild: `docker compose ... up -d --build` |
 | Webhook nunca chega | `EVOLUTION_WEBHOOK_BASE_URL` errado, ou Sparzap não está na mesma rede da Evolution | `docker network inspect <rede>`; confira se `web` aparece nela |
 | `502 Bad Gateway` no Nginx | `web` ainda subindo ou caiu | `docker compose ps`, `docker compose logs web` |
 | Migração falha com "role does not exist" | Usuário/banco Postgres não criados no host compartilhado | Repetir os `CREATE DATABASE`/`CREATE USER` acima |
 | Estáticos (CSS/JS) não carregam | `collectstatic` não rodou no build, ou `STATIC_URL` divergente | Confirme que o build do `Dockerfile` chegou até `collectstatic` sem erro |
+
+## Ensaio local antes da VPS
+
+O stack de produção já foi exercitado nesta máquina (não numa VPS) com
+`docker-compose.prod-local.yml` — ver [ambiente.md](ambiente.md#simular-produção-na-sua-máquina).
+Isso validou o `Dockerfile`, o `collectstatic`, o WhiteNoise com
+`ManifestStorage`, o proxy do Nginx, CSRF/sessão com `DEBUG=False`, e a
+cadeia webhook → gunicorn → Redis → worker.
+
+Três problemas só apareceram nesse ensaio, e valem para a VPS: a
+`SECRET_KEY` com `$` (tabela acima), o rebuild obrigatório após mudar
+código, e um `WORKER TIMEOUT` numa campanha com 778 contatos que o
+`runserver` escondia.
+
+O que o ensaio **não** cobre: Postgres (foi SQLite), HTTPS/certificado, a
+rede externa real da VPS e o consumo de RAM sob carga.
 
 ## Checklist de primeira execução real (pendente de validar contra a VPS)
 
