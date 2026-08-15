@@ -96,3 +96,66 @@ class InstanceViewsTests(TestCase):
 
         html = r.content.decode()
         self.assertIn('src="data:image/png;base64,ABC123=="', html)
+
+
+class RegistrarWebhooksCommandTests(TestCase):
+    """
+    O webhook fica gravado na Evolution com a URL de quando a instância foi
+    criada. Trocar o endereço do Sparzap (dev <-> produção, ou domínio novo
+    na VPS) não reescreve esse registro sozinho: a Evolution continua
+    chamando o endereço antigo e as respostas somem sem erro nenhum.
+    """
+
+    def setUp(self):
+        self.owner = make_user(email='webhooks-cmd@teste.com')
+
+    def _rodar(self):
+        from io import StringIO
+
+        from django.core.management import call_command
+
+        saida = StringIO()
+        call_command('registrar_webhooks', stdout=saida, stderr=saida)
+        return saida.getvalue()
+
+    @patch('instances.evolution.EvolutionClient.set_webhook')
+    def test_reescreve_o_webhook_de_todas_as_instancias(self, mock_set):
+        make_instance(owner=self.owner, nome='Um', evolution_instance_name='um')
+        make_instance(owner=self.owner, nome='Dois', evolution_instance_name='dois')
+
+        self._rodar()
+
+        self.assertEqual(mock_set.call_count, 2)
+        registradas = {chamada.args[0] for chamada in mock_set.call_args_list}
+        self.assertEqual(registradas, {'um', 'dois'})
+
+    @patch('instances.evolution.EvolutionClient.set_webhook')
+    def test_usa_a_url_base_e_o_token_do_settings(self, mock_set):
+        make_instance(owner=self.owner, evolution_instance_name='minha')
+
+        with self.settings(
+            EVOLUTION_WEBHOOK_BASE_URL='http://exemplo.test',
+            EVOLUTION_WEBHOOK_SECRET='segredo123',
+        ):
+            self._rodar()
+
+        url = mock_set.call_args.args[1]
+        self.assertEqual(url, 'http://exemplo.test/webhooks/evolution/minha/?token=segredo123')
+
+    @patch('instances.evolution.EvolutionClient.set_webhook')
+    def test_uma_instancia_com_erro_nao_impede_as_outras(self, mock_set):
+        from instances.evolution import EvolutionError
+
+        make_instance(owner=self.owner, nome='Quebrada', evolution_instance_name='quebrada')
+        make_instance(owner=self.owner, nome='Boa', evolution_instance_name='boa')
+
+        def falha_so_na_quebrada(nome, *args, **kwargs):
+            if nome == 'quebrada':
+                raise EvolutionError('falhou')
+
+        mock_set.side_effect = falha_so_na_quebrada
+
+        saida = self._rodar()
+
+        self.assertEqual(mock_set.call_count, 2)
+        self.assertIn('quebrada', saida)
