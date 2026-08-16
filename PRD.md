@@ -5,8 +5,8 @@
 > **Inspiração:** Revzap (revzap.com.br) — features mapeadas do site oficial + vídeo 3
 > **Stack:** Django 5 + Evolution API v2 (Baileys) + Celery/Redis + PostgreSQL + TailwindCSS
 > **Autor:** TechTeo (Renato Teodoro)
-> **Status:** Em desenvolvimento — v0.5 (scaffold Django ativo; sprints 0–19 planejadas; 122+ testes)
-> **Data:** 2026-08-15
+> **Status:** Em desenvolvimento — v0.6 (sprints 0–19 concluídas + Sprint 20 (IA nas condições); 218 testes)
+> **Data:** 2026-08-16
 
 ---
 
