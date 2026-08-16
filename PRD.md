@@ -5,8 +5,8 @@
 > **Inspiração:** Revzap (revzap.com.br) — features mapeadas do site oficial + vídeo 3
 > **Stack:** Django 5 + Evolution API v2 (Baileys) + Celery/Redis + PostgreSQL + TailwindCSS
 > **Autor:** TechTeo (Renato Teodoro)
-> **Status:** Draft — v0.2 (revisão minuciosa + plano de sprints)
-> **Data:** 2026-08-13
+> **Status:** Em desenvolvimento — v0.5 (scaffold Django ativo; sprints 0–19 planejadas; 122+ testes)
+> **Data:** 2026-08-15
 
 ---
 
@@ -122,6 +122,53 @@ Aplicação web própria que automatiza:
 | Assinatura paga por máquina | Custo só de infra (VPS + chips) |
 | Funciona só com browser aberto | API + fila + agendamento nativo |
 | Black-box | Código próprio, extensível, integrável (ex.: pipeline Promo) |
+
+### 3.5 Análise de Concorrência — Total Chat (diretos e indiretos)
+
+> **Fonte:** site oficial (totalchat.com.br), Instagram @totalchatoficial, comparativos públicos (15/08/2026).
+> **Análise completa:** `~/life/Trabalho/Projetos/sparzap-concorrente-totalchat.md`
+
+#### O concorrente (perfil)
+
+| Item | Total Chat |
+|---|---|
+| Empresa | Newee Soluções em Tecnologia LTDA |
+| Origem | **Florianópolis/SC** (mercado local do TechTeo!) |
+| Canal | WhatsApp + Instagram (omnichannel) |
+| Conexão | API Oficial Meta **e** QR Code (Baileys) |
+| Modelo | SaaS (não self-hosted) |
+
+#### Preços (o ponto fraco dele — oportunidade do Sparzap)
+
+| Item | Total Chat | Sparzap (self-hosted) |
+|---|---|---|
+| Plano Profissional | **R$ 349,90/mês** (promo R$ 179,90) | Custo da VPS + chip (~R$ 30–50/mês) |
+| Usuário adicional | R$ 65,00 | Ilimitado (mesmo plano) |
+| Campanhas em massa | Créditos **comprados à parte** | Ilimitado (Evolution/Baileys) |
+| IA (ChatGPT) | Inclusa | LLM próprio (GLM/Luna via opencode) |
+| Trial | 5 dias | Teste ilimitado (é seu) |
+
+#### Funcionalidades dele que o Sparzap deve ter (ou já tem)
+
+| Funcionalidade | Total Chat | Sparzap |
+|---|---|---|
+| Multiatendimento (1 número, N operadores) | ✅ | 🔲 **v2 — caixa de entrada humana** (sinergia com F1/F4) |
+| Chatbot com IA | ✅ ChatGPT | 🔲 F1 (respondedor IA + fallback humano) |
+| Chatbot de fluxo | ✅ | ✅ RF-29/30 (scripts com passos) |
+| CRM Kanban | ✅ | ✅ RF-56/58 (pipeline + kanban) |
+| Mensagem de ausência/encerramento | ✅ | 🔲 **v1 — adicionar como mensagens da biblioteca com horário** |
+| Múltiplos números | ✅ | ✅ RF-01/05 (instâncias) |
+| Omnichannel Instagram | ✅ | 🔲 F5 (API pública) — avaliar Direct IG no futuro |
+| API aberta | ✅ | ✅ RF-80/84 (DRF) |
+| Integração Trello/Calendar | ✅ | 🔲 v2 (avaliar webhooks/API aberta cobre) |
+
+#### Conclusão estratégica
+
+1. **Preço é a maior vantagem do Sparzap**: 5–10× mais barato que o Total Chat no mesmo nicho (PMEs).
+2. **Diferenciação por automação**: Total Chat é ferramenta de *atendimento*; Sparzap é ferramenta de *disparo + funil + CRM* — o fluxo do vídeo 3 (2 passos) não é o core dele.
+3. **Mercado local**: ambos em Florianópolis — o Sparzap pode atacar PMEs locais com preço e automação.
+4. **Não copiar**: campanha com créditos pagos à parte (custo escondido) é anti-padrão — Sparzap mantém ilimitado.
+5. **Atenção ao ban**: Total Chat opera com API oficial Meta E QR Code — o Sparzap (Baileys não oficial) precisa do AntiBlock forte (já desenhado, RF-63/70).
 
 ---
 
@@ -257,6 +304,9 @@ remover o próprio admin (`POST /group/updateParticipant` com `action=demote`) p
 - **RF-54** Prioridade/ordem de avaliação entre regras e limite anti-loop (não responder 2× em N minutos).
 - **RF-55** **Resposta com IA (chatbot contextual)** *(v2)*: LLM responde perguntas abertas;
   se não souber → alerta humano no painel + lead entra na fila de atendimento.
+- **RF-55a** **Mensagem de ausência/encerramento** *(inspirado no Total Chat)*: mensagem automática
+  da biblioteca disparada fora do horário comercial (ex.: "Olá! Estamos fora do horário...") e
+  mensagem de encerramento ao fim do expediente; configuração por instância com janela de horário.
 
 ### 6.8 CRM / Etapas (`crm`)
 
@@ -1602,3 +1652,5 @@ de um painel operacional.
 | v0.1 | 2026-08-13 | Draft inicial: visão, features, modelo de dados, integração Evolution, MVP em 3 fases |
 | v0.2 | 2026-08-13 | Revisão minuciosa: estrutura padrão (apps, RF/RNF numerados, ERD, design system, user stories, KPIs), fluxos Mermaid, e **plano de 20 sprints + 6 sprints futuras** substituindo as fases genéricas |
 | v0.3 | 2026-08-13 | Seção 9 (Design System) reescrita para usar os tokens reais de `mongodb/design-system-light.html`/`-dark.html` (paleta Forest/Green/Teal, tipografia DM Serif Display + Inter + Source Code Pro, escalas de espaçamento/raio/elevação) no lugar da paleta genérica emerald/slate anterior |
+| v0.4 | 2026-08-15 | **Análise de concorrência (seção 3.5): Total Chat** — preços (R$ 349,90/mês), funcionalidades (chatbot IA, kanban, multiatendimento, omnichannel), onde o Sparzap vence (custo, automação, ilimitado) e novo RF-55a (mensagem de ausência/encerramento); decisão de infra: **chip pré-pago Vivo (~R$ 15/mês) em vez de número virtual** para instâncias (menor risco de ban, ativação por SMS confiável) |
+| v0.5 | 2026-08-15 | Atualização do status do projeto: scaffold Django criado e evoluindo (webhooks, testes E2E); documentação das correções no fluxo de scripts (passo "Encerrar", classificação por IA); 122+ testes passando |
